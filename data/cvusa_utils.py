@@ -1,6 +1,8 @@
 import os
 from data.custom_transforms import *
 import torch
+import numpy
+
 
 class CVUSA(torch.utils.data.Dataset):
     def __init__(self, root, csv_file, sate_size=(256, 256), pano_size=(616, 112), use_polar=False, name=None, transform_op=None):
@@ -18,25 +20,36 @@ class CVUSA(torch.utils.data.Dataset):
             lines = f.readlines()
             pano_ims, sate_ims, item_ids, pano_ann = [], [], [], []
             for line in lines:
+                
                 items = line.strip().split(',')
+                if(len(items) == 1): # the small sanity check training set have a different separator in the csv
+                	items = line.strip().split(';')
+                    
                 item_id = (items[0].split('/')[-1]).split('.')[0]
                 if use_polar:
-                    sate_ims.append(items[0].replace('bingmap', 'polarmap').replace('jpg', 'png'))
+                      # adjusted because of different folder structure
+                    sate_ims.append(items[0].replace('bingmap', 'polarmap').replace('/19', '')) #.replace('jpg', 'png')
                 else:
                     sate_ims.append(items[0])
+                
                 item_ids.append(item_id)
                 pano_ims.append(items[1])
                 pano_ann.append(items[2])
+                
         self.pano_ims, self.sate_ims, self.pano_ann, self.item_ids = pano_ims, sate_ims, pano_ann, item_ids
         self.num = len(self.pano_ims)
         print('Load data from {}, total {}'.format(csv_path, self.num))
 
     @classmethod
     def load_im(self, im_path, resize=None):
+         
         im = cv2.imread(im_path)
+        
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+        
         if resize:
             im = cv2.resize(im, resize, interpolation=cv2.INTER_CUBIC)
+            
         im = np.array(im, dtype=np.float32)
         return im
 
@@ -47,6 +60,7 @@ class CVUSA(torch.utils.data.Dataset):
         sate_path = os.path.join(self.root, self.sate_ims[pos_id])
         pano_path = os.path.join(self.root, self.pano_ims[pos_id])
         # Load and process images
+        
         sate_im = self.load_im(sate_path, resize=self.sate_size)
         pano_im = self.load_im(pano_path, resize=self.pano_size)
         sample = {'satellite': sate_im, 'street': pano_im}

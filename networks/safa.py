@@ -21,7 +21,9 @@ class SA(nn.Module):
 
     def forward(self, x):
         mask, _ = x.max(1)
-        mask = torch.einsum('bi, ijd -> bjd', mask, self.w1) + self.b1
+        
+        # why are they different?
+        mask = torch.einsum('bi, ijd -> bjd', mask, self.w1) + self.b1 
         mask = torch.einsum('bjd, jid -> bid', mask, self.w2) + self.b2
         return mask
 
@@ -31,28 +33,31 @@ class SAFA(nn.Module):
         super().__init__()
 
         self.extract2 = backbones.ResNet34()
-        in_dim1 = (H1 // 8) * (W1 // 8)
-        in_dim2 = (H2 // 8) * (W2 // 8)
-        self.sa1 = SA(in_dim1, sa_num)
-        self.sa2 = SA(in_dim2, sa_num)
+        in_dim1 = (H1 // 8) * (W1 // 8)  # 
+        # print("in_dim1=", in_dim1)
+        # in_dim2 = (H2 // 8) * (W2 // 8)
+        self.sa1 = SA(in_dim1, sa_num) # siamese
+        # self.sa2 = SA(in_dim2, sa_num)
 
-    def forward(self, im2, res1):
+    def forward(self, street, satellite):
         # Local feature extraction
-        f2 = self.extract2(im2)
-        B, C, _, _ = res1.shape
-        f1 = res1.view(B, C, -1)
-        f2 = f2.view(B, C, -1)
+        street_extracted = self.extract2(street)
+        sat_extracted = self.extract2(satellite)
+        # print(street_extracted.shape, sat_extracted.shape)
+        B, C, _, _ = sat_extracted.shape
+        street_extracted = street_extracted.view(B, C, -1)
+        sat_extracted = sat_extracted.view(B, C, -1)
 
         # Spatial aware attention
-        w1 = self.sa1(f1)
-        w2 = self.sa2(f2)
+        w1 = self.sa1(street_extracted)
+        w2 = self.sa1(sat_extracted)
 
         # Global feature aggregation
-        f1 = torch.matmul(f1, w1).view(B, -1)
-        f2 = torch.matmul(f2, w2).view(B, -1)
+        street_extracted = torch.matmul(street_extracted, w1).view(B, -1)
+        sat_extracted = torch.matmul(sat_extracted, w2).view(B, -1)
 
         # Feature reduction
-        f1 = F.normalize(f1, p=2, dim=1)
-        f2 = F.normalize(f2, p=2, dim=1)
+        street_extracted = F.normalize(street_extracted, p=2, dim=1)
+        sat_extracted = F.normalize(sat_extracted, p=2, dim=1)
 
-        return f1, f2
+        return sat_extracted, street_extracted

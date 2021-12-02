@@ -12,14 +12,14 @@ class Parser():
         parser.add_argument('--name', type=str, default='', help=' ')
         parser.add_argument('--seed', type=int, default=10)
         parser.add_argument('--phase', type=str, default='train', help='')
-        parser.add_argument('--gpu_ids', type=str, default='0, 1', help='gpu ids: e.g. 0  0,1')
+        parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1') # in colab we seem to have one gpu with id "0"
 
         parser.add_argument('--isTrain', default=True, action='store_true')
         parser.add_argument('--resume', default=True, action='store_true')
         parser.add_argument('--start_epoch', type=int, default=0)
 
         #data parameters
-        parser.add_argument('--data_root', type=str, default= './placeholder_data_path')
+        parser.add_argument('--data_root', type=str, default= '../CVUSA/')
         parser.add_argument('--train_csv', type=str, default='train-19zl.csv')
         parser.add_argument('--val_csv', type=str, default='val-19zl.csv')
         parser.add_argument('--polar', default=True, action='store_true')
@@ -28,8 +28,8 @@ class Parser():
         parser.add_argument('--rgan_checkpoint', type=str, default=None)
 
         #train parameters
-        parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of combined training")
-        parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
+        parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of combined training")
+        parser.add_argument("--batch_size", type=int, default=16, help="size of the batches")
         parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_r", type=float, default=0.0001, help="adam: learning rate")
@@ -76,7 +76,9 @@ class Parser():
         opt, _ = parser.parse_known_args()
         # save and return the parser
         self.parser = parser
-        return parser.parse_args()
+        print("----------------- \n", opt)
+        
+        return parser.parse_args(args=[])
 
 
     def print_options(self, opt):

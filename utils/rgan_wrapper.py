@@ -4,30 +4,34 @@ from networks.c_gan import *
 
 class RGANWrapper(BaseModel):
 
-    def __init__(self, opt, log_file, net_G, net_D, net_R):
+    def __init__(self, opt, log_file, net_R):
         BaseModel.__init__(self, opt, log_file)
         self.optimizers = []
         self.ret_best_acc = 0.0
+        
         #initialize generator, discriminator and retrieval
-        self.generator = net_G
+        
+        # self.generator = net_G
         self.retrieval = net_R
-        self.discriminator = net_D
+        # self.discriminator = net_D
 
         self.criterion = GANLoss(opt.gan_loss).to(opt.device)
         self.criterion_l1 = torch.nn.L1Loss()
 
         # Optimizers
-        self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=opt.lr_d, betas=(opt.b1, opt.b2))
-        self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=opt.lr_g, betas=(opt.b1, opt.b2))
+        # self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=opt.lr_d, betas=(opt.b1, opt.b2))
+        # self.optimizer_G = torch.optim.Adam(self.generator.parameters(), lr=opt.lr_g, betas=(opt.b1, opt.b2))
         self.optimizer_R = torch.optim.Adam(self.retrieval.parameters(), lr=opt.lr_r, betas=(opt.b1, opt.b2))
 
-        self.optimizers.append(self.optimizer_G)
-        self.optimizers.append(self.optimizer_D)
+        # self.optimizers.append(self.optimizer_G)
+        # self.optimizers.append(self.optimizer_D)
         self.optimizers.append(self.optimizer_R)
         self.load_networks()
 
     def forward(self):
-        self.fake_street, self.residual = self.generator(self.satellite)
+        # self.fake_street, self.residual = self.generator(self.satellite)
+        None
+        
     def backward_D(self):
 
         # Fake discriminator train
@@ -46,7 +50,7 @@ class RGANWrapper(BaseModel):
 
     def backward_R(self, epoch):
 
-        self.fake_street_out, self.street_out = self.retrieval(self.street, self.residual.detach())
+        self.fake_street_out, self.street_out = self.retrieval(self.street, self.satellite)
         if epoch <= 20:
             self.r_loss = self.soft_margin_triplet_loss(self.fake_street_out, self.street_out, loss_weight=self.opt.lambda_sm, hard_topk_ratio=self.opt.hard_topk_ratio)
         elif epoch > 20 and epoch <=40:
@@ -91,36 +95,36 @@ class RGANWrapper(BaseModel):
         self.forward()
 
         # update D
-        self.set_requires_grad(self.discriminator, True)
-        self.optimizer_D.zero_grad()
-        self.backward_D()
-        self.optimizer_D.step()
+        # self.set_requires_grad(self.discriminator, True)
+        # self.optimizer_D.zero_grad()
+        # self.backward_D()
+        # self.optimizer_D.step()
 
         # update R
-        self.set_requires_grad(self.discriminator, False)
+        # self.set_requires_grad(self.discriminator, False)
         self.set_requires_grad(self.retrieval, True)
         self.optimizer_R.zero_grad()
         self.backward_R(epoch)
         self.optimizer_R.step()
 
         # update G
-        self.set_requires_grad(self.retrieval, False)
-        self.optimizer_G.zero_grad()
-        self.backward_G(epoch)
-        self.optimizer_G.step()
+        # self.set_requires_grad(self.retrieval, False)
+        # self.optimizer_G.zero_grad()
+        # self.backward_G(epoch)
+        # self.optimizer_G.step()
 
     def eval_model(self):
         self.forward()
-        self.fake_street_out_val, self.street_out_val = self.retrieval(self.street, self.residual)
+        self.fake_street_out_val, self.street_out_val = self.retrieval(self.street, self.satellite)
 
 
     def save_networks(self, epoch, out_dir, last_ckpt=False, best_acc=None, is_best=False):
         ckpt = {'last_epoch': epoch,
                 'best_acc': best_acc,
-                'generator_model_dict': self.generator.state_dict(),
-                'optimizer_G_dict': self.optimizer_G.state_dict(),
-                'discriminator_model_dict': self.discriminator.state_dict(),
-                'optimizer_D_dict': self.optimizer_D.state_dict(),
+                # 'generator_model_dict': self.generator.state_dict(),
+                # 'optimizer_G_dict': self.optimizer_G.state_dict(),
+                # 'discriminator_model_dict': self.discriminator.state_dict(),
+                # 'optimizer_D_dict': self.optimizer_D.state_dict(),
                 'retriebal_model_dict': self.retrieval.state_dict(),
                  'optimizer_R_dict': self.optimizer_R.state_dict(),
                 }
@@ -145,15 +149,15 @@ class RGANWrapper(BaseModel):
         self.ret_best_acc = ckpt['best_acc']
 
         # Load net state
-        generator_dict = ckpt['generator_model_dict']
-        discriminator_dict = ckpt['discriminator_model_dict']
+        # generator_dict = ckpt['generator_model_dict']
+        # discriminator_dict = ckpt['discriminator_model_dict']
         retrieval_dict = ckpt['retriebal_model_dict']
 
-        self.generator.load_state_dict(generator_dict, strict=False)
-        self.optimizer_G = ckpt['optimizer_G_dict']
+        # self.generator.load_state_dict(generator_dict, strict=False)
+        # self.optimizer_G = ckpt['optimizer_G_dict']
 
-        self.discriminator.load_state_dict(discriminator_dict)
-        self.optimizer_D = ckpt['optimizer_D_dict']
+        # self.discriminator.load_state_dict(discriminator_dict)
+        # self.optimizer_D = ckpt['optimizer_D_dict']
 
         self.retrieval.load_state_dict(retrieval_dict)
         self.optimizer_R = ckpt['optimizer_R_dict']
