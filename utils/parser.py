@@ -19,7 +19,7 @@ class Parser():
         parser.add_argument('--start_epoch', type=int, default=0)
 
         #data parameters
-        parser.add_argument('--data_root', type=str, default= '../CVUSA/')
+        parser.add_argument('--data_root', type=str, default= './data/CVUSA')
         parser.add_argument('--train_csv', type=str, default='train-19zl.csv')
         parser.add_argument('--val_csv', type=str, default='val-19zl.csv')
         parser.add_argument('--polar', default=True, action='store_true')
