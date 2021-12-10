@@ -130,3 +130,6 @@ dmypy.json
 
 # Dataset
 data/CVUSA
+
+# Git Handler
+colab_git.ipynb
