@@ -128,8 +128,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Dataset
+# Dataset, output
 data/CVUSA
+output/*
 
 # Git Handler
 colab_git.ipynb
