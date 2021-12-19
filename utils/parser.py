@@ -1,6 +1,7 @@
 import argparse
 import os
 import torch
+import time
 
 class Parser():
     def __init__(self):
@@ -12,7 +13,7 @@ class Parser():
         parser.add_argument('--name', type=str, default='', help=' ')
         parser.add_argument('--seed', type=int, default=10)
         parser.add_argument('--phase', type=str, default='train', help='')
-        parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1') # in colab we seem to have one gpu with id "0"
+        parser.add_argument('--gpu_ids', type=str, default='0,1', help='gpu ids: e.g. 0  0,1') # in colab we seem to have one gpu with id "0"
 
         parser.add_argument('--isTrain', default=True, action='store_true')
         parser.add_argument('--resume', default=True, action='store_true')
@@ -29,7 +30,7 @@ class Parser():
 
         #train parameters
         parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of combined training")
-        parser.add_argument("--batch_size", type=int, default=16, help="size of the batches")
+        parser.add_argument("--batch_size", type=int, default=24, help="size of the batches")
         parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_r", type=float, default=0.0001, help="adam: learning rate")
@@ -56,8 +57,8 @@ class Parser():
         parser.add_argument("--realout_c", type=int, default=3)
         parser.add_argument("--n_layers", type=int, default=3)
         parser.add_argument("--feature_c", type=int, default=64)
-        parser.add_argument('--g_model', type=str, default='unet-skip')
-        parser.add_argument('--d_model', type=str, default='basic')
+        parser.add_argument('--g_model', type=str, default='shared-weights')
+        parser.add_argument('--d_model', type=str, default='polar')
         parser.add_argument('--r_model', type=str, default='SAFA')
         parser.add_argument('--gan_loss', type=str, default='vanilla')
 
@@ -73,12 +74,12 @@ class Parser():
             parser = self.initialize(parser)
 
         # get the basic options
-        opt, _ = parser.parse_known_args()
+        opt, _ = parser.parse_known_args() # add `args=[]` as argument when using jupyter
         # save and return the parser
         self.parser = parser
         print("----------------- \n", opt)
         
-        return parser.parse_args(args=[])
+        return parser.parse_args()
 
 
     def print_options(self, opt):
@@ -95,11 +96,9 @@ class Parser():
         print(message)
 
         # save to the disk
-        prefix = '{}_{}_lrg{}_lrd{}_lrr{}_batch{}_l1w{}_retl1w_{}_HN_{}_HN1decay_{}HN2decay_{}HN3decay_{}'.format(opt.g_model, opt.d_model, opt.lr_g,
-                                                                                                         opt.lr_d, opt.lr_r,
-                                                                                                         opt.batch_size, opt.lambda_l1, opt.lambda_ret1,
-                                                                                                         opt.hard_topk_ratio, opt.hard_decay1_topk_ratio,
-                                                                                                         opt.hard_decay2_topk_ratio, opt.hard_decay3_topk_ratio)
+        prefix = '{}_{}_lrg{}_lrd{}_lrr{}_batch{}_{}'.format(opt.g_model, opt.d_model, opt.lr_g,
+                                                            opt.lr_d, opt.lr_r, opt.batch_size,
+                                                            time.strftime("%Y%m%d-%H%M%S"))
 
         out_dir = os.path.join(opt.results_dir, prefix)
         if not os.path.exists(out_dir):
