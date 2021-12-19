@@ -14,25 +14,25 @@ if __name__ == '__main__':
     make_deterministic(opt.seed)
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(x) for x in opt.gpu_ids)
 
+    assert opt.resume != '', "The `--resume` argument has to contain a valid model in the `--results_dir` folder for testing!" 
+    
     log = open(log_file, 'a')
     log_print = lambda ms: parse.log(ms, log)
 
     #define networks
-    generator = define_G(netG=opt.g_model, gpu_ids=opt.gpu_ids)
-    print('Init {} as generator model'.format(opt.g_model))
+    # generator = define_G(netG=opt.g_model, gpu_ids=opt.gpu_ids)
+    # print('Init {} as generator model'.format(opt.g_model))
 
-    discriminator = define_D(input_c=opt.input_c, output_c=opt.realout_c, ndf=opt.feature_c, netD=opt.d_model,
-                                condition=opt.condition, n_layers_D=opt.n_layers, gpu_ids=opt.gpu_ids)
-    print('Init {} as discriminator model'.format(opt.d_model))
+    # discriminator = define_D(input_c=opt.input_c, output_c=opt.realout_c, ndf=opt.feature_c, netD=opt.d_model,
+    #                             condition=opt.condition, n_layers_D=opt.n_layers, gpu_ids=opt.gpu_ids)
+    # print('Init {} as discriminator model'.format(opt.d_model))
 
     retrieval = define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
     print('Init {} as retrieval model'.format(opt.r_model))
 
     # Initialize network wrapper
-    if opt.resume:
-        opt.rgan_checkpoint = os.path.join('./placeholder_checkpoint_path', 'rgan_best_ckpt.pth')
-
-    rgan_wrapper = rgan_wrapper.RGANWrapper(opt, log_file, generator, discriminator, retrieval)
+    opt.rgan_checkpoint = os.path.join(opt.results_dir, opt.resume, 'rgan_best_ckpt.pth')
+    rgan_wrapper = rgan_wrapper.RGANWrapper(opt, log_file, retrieval)
     # Configure data loader
     val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, use_polar=opt.polar, name=opt.name,
                         transform_op=ToTensor())
@@ -41,14 +41,13 @@ if __name__ == '__main__':
     log_print('Load test dataset from {}: val_set={}'.format(opt.data_root, len(val_dataset)))
     log_print('length of val loader: {:d}'.format(len(val_loader)))
 
-    rgan_wrapper.generator.eval()
+    # rgan_wrapper.generator.eval()
     rgan_wrapper.retrieval.eval()
     fake_street_batches_v = []
     street_batches_v = []
     item_ids = []
 
     for i, data in enumerate(val_loader):
-        print (i)
         rgan_wrapper.set_input(data)
         rgan_wrapper.eval_model()
         fake_street_batches_v.append(rgan_wrapper.fake_street_out_val.cpu().data)

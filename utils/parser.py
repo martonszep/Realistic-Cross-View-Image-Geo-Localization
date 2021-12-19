@@ -16,7 +16,7 @@ class Parser():
         parser.add_argument('--gpu_ids', type=str, default='0,1', help='gpu ids: e.g. 0  0,1') # in colab we seem to have one gpu with id "0"
 
         parser.add_argument('--isTrain', default=True, action='store_true')
-        parser.add_argument('--resume', default=True, action='store_true')
+        parser.add_argument('--resume', type=str, default='', help='model to load from `--results_dir`')
         parser.add_argument('--start_epoch', type=int, default=0)
 
         #data parameters
@@ -24,12 +24,12 @@ class Parser():
         parser.add_argument('--train_csv', type=str, default='train-19zl.csv')
         parser.add_argument('--val_csv', type=str, default='val-19zl.csv')
         parser.add_argument('--polar', default=True, action='store_true')
-        parser.add_argument('--save_step', type=int, default=10)
+        # parser.add_argument('--save_step', type=int, default=10)
 
         parser.add_argument('--rgan_checkpoint', type=str, default=None)
 
         #train parameters
-        parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of combined training")
+        parser.add_argument("--n_epochs", type=int, default=20, help="number of epochs of combined training")
         parser.add_argument("--batch_size", type=int, default=24, help="size of the batches")
         parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
@@ -96,15 +96,19 @@ class Parser():
         print(message)
 
         # save to the disk
-        prefix = '{}_{}_lrg{}_lrd{}_lrr{}_batch{}_{}'.format(opt.g_model, opt.d_model, opt.lr_g,
-                                                            opt.lr_d, opt.lr_r, opt.batch_size,
-                                                            time.strftime("%Y%m%d-%H%M%S"))
-
-        out_dir = os.path.join(opt.results_dir, prefix)
-        if not os.path.exists(out_dir):
+        if opt.resume == '':
+            prefix = '{}_{}_lrg{}_lrd{}_lrr{}_batch{}_{}'.format(opt.g_model, opt.d_model, opt.lr_g,
+                                                                opt.lr_d, opt.lr_r, opt.batch_size,
+                                                                time.strftime("%Y%m%d-%H%M%S"))
+            out_dir = os.path.join(opt.results_dir, prefix)
             os.makedirs(out_dir)
+        else:
+            out_dir = os.path.join(opt.results_dir, opt.resume)
+            if not os.path.exists(out_dir):
+                raise NotADirectoryError("The `--resume` argument is not a valid model in the `--results_dir` folder!")
+
         file_name = os.path.join(out_dir, 'log.txt')
-        with open(file_name, 'wt') as opt_file:
+        with open(file_name, 'at') as opt_file:
             opt_file.write(message)
             opt_file.write('\n')
             opt_file.flush()
