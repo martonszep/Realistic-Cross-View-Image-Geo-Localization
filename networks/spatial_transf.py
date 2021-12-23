@@ -15,19 +15,19 @@ class SpatialTransf (nn.Module):
         self.localization = nn.Sequential(
             nn.Conv2d(in_channels, 8, kernel_size=7),
             nn.MaxPool2d(2, stride=2),
-            #nn.BatchNorm2d(8),
+            nn.BatchNorm2d(8),
             nn.ReLU(True),
             nn.Conv2d(8, 10, kernel_size=5),
             nn.MaxPool2d(2, stride=2),
-            #nn.BatchNorm2d(10),
+            nn.BatchNorm2d(10),
             nn.ReLU(True),
             nn.Conv2d(10, 10, kernel_size=3),
             nn.MaxPool2d(2, stride=2),
-            #nn.BatchNorm2d(10),
+            nn.BatchNorm2d(10),
             nn.ReLU(True),
             nn.Conv2d(10, 10, kernel_size=3),
             nn.MaxPool2d(2, stride=2),
-            #nn.BatchNorm2d(10),
+            nn.BatchNorm2d(10),
             nn.ReLU(True),
 
             

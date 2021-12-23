@@ -31,8 +31,8 @@ class Parser():
         #train parameters
         parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of combined training")
         parser.add_argument("--batch_size", type=int, default=24, help="size of the batches")
-        parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
-        parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
+        #parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
+        #parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_r", type=float, default=0.0001, help="adam: learning rate")
 
         parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
@@ -97,8 +97,7 @@ class Parser():
 
         # save to the disk
         if opt.resume == '':
-            prefix = '{}_{}_lrg{}_lrd{}_lrr{}_batch{}_{}'.format(opt.g_model, opt.d_model, opt.lr_g,
-                                                                opt.lr_d, opt.lr_r, opt.batch_size,
+            prefix = '{}_{}_lrr{}_batch{}_{}'.format(opt.g_model, opt.d_model, opt.lr_r, opt.batch_size,
                                                                 time.strftime("%Y%m%d-%H%M%S"))
             out_dir = os.path.join(opt.results_dir, prefix)
             os.makedirs(out_dir)
