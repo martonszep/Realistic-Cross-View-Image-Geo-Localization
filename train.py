@@ -1,7 +1,7 @@
 from data.custom_transforms import *
 from data.cvusa_utils import CVUSA
 from networks.c_gan import *
-from os.path import exists, join, basename, dirname
+from torch.utils.tensorboard import SummaryWriter
 from utils import rgan_wrapper, base_wrapper, parser
 from utils.setup_helper import *
 import time
@@ -15,10 +15,10 @@ if __name__ == '__main__':
     make_deterministic(opt.seed)
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(x) for x in opt.gpu_ids)
     log = open(log_file, 'a')
-    log_print = lambda ms: parse.log(ms, log)
+    log_print = lambda ms: parse.log(ms, log) # txt logger
+    writer = SummaryWriter(log_dir=log_file.replace('log.txt', '')) # tensorboard logger
 
     #define networks
-
     # generator = define_G(netG=opt.g_model, gpu_ids=opt.gpu_ids)
     # log_print('Init {} as generator model'.format(opt.g_model))
 
@@ -30,6 +30,8 @@ if __name__ == '__main__':
     log_print('Init {} as retrieval model'.format(opt.r_model))
 
     rgan_wrapper = rgan_wrapper.RGANWrapper(opt, log_file, retrieval)
+    total_params = sum(p.numel() for p in rgan_wrapper.retrieval.parameters() if p.requires_grad)
+    log_print('No. of trainable parameters: {}'.format(total_params))
 
     # Configure data loader
     composed_transforms = transforms.Compose([RandomHorizontalFlip(),
@@ -51,11 +53,12 @@ if __name__ == '__main__':
         val_batches_done = 0
         street_batches_t = []
         fake_street_batches_t = []
+        epoch_retrieval_loss_t = []
         street_batches_v = []
         fake_street_batches_v = []
-        epoch_retrieval_loss = []
-        epoch_generator_loss = []
-        epoch_discriminator_loss = []
+        epoch_retrieval_loss_v= []
+        # epoch_generator_loss = []
+        # epoch_discriminator_loss = []
         log_print('>>> RGAN Epoch {}'.format(epoch))
         # rgan_wrapper.generator.train()
         # rgan_wrapper.discriminator.train()
@@ -69,7 +72,7 @@ if __name__ == '__main__':
 
             fake_street_batches_t.append(rgan_wrapper.fake_street_out.cpu().data)
             street_batches_t.append(rgan_wrapper.street_out.cpu().data)
-            epoch_retrieval_loss.append(rgan_wrapper.r_loss.item())
+            epoch_retrieval_loss_t.append(rgan_wrapper.r_loss.item())
             # epoch_discriminator_loss.append(rgan_wrapper.d_loss.item())
             # epoch_generator_loss.append(rgan_wrapper.g_loss.item())
 
@@ -81,15 +84,16 @@ if __name__ == '__main__':
                 tp5 = rgan_wrapper.mutual_topk_acc(dists, topk=5)
                 tp10 = rgan_wrapper.mutual_topk_acc(dists, topk=10)
                 log_print('Batch:{} loss={:.3f} samples:{} tp1={tp1[0]:.2f}/{tp1[1]:.2f} ' \
-                        'tp5={tp5[0]:.2f}/{tp5[1]:.2f} Time:{time:.2f}s'.format(i + 1, np.mean(epoch_retrieval_loss),
+                        'tp5={tp5[0]:.2f}/{tp5[1]:.2f} Time:{time:.2f}s'.format(i + 1, np.mean(epoch_retrieval_loss_t),
                                                 len(dists), tp1=tp1, tp5=tp5, time=time.time() - start_time_batches))
                 start_time_batches = time.time()
                 street_batches_t.clear()
                 fake_street_batches_t.clear()
+        
+        writer.add_scalar('Loss/Train', np.mean(epoch_retrieval_loss_t), epoch) # tensorboard logging
 
         rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc,
                                         last_ckpt=True)  # Always save last ckpt
-
 
         # Save model periodically
         # if (epoch + 1) % opt.save_step == 0:
@@ -102,8 +106,8 @@ if __name__ == '__main__':
             rgan_wrapper.eval_model()
             fake_street_batches_v.append(rgan_wrapper.fake_street_out_val.cpu().data)
             street_batches_v.append(rgan_wrapper.street_out_val.cpu().data)
-
-
+            epoch_retrieval_loss_v.append(rgan_wrapper.r_loss.item())
+        
         fake_street_vec = torch.cat(fake_street_batches_v, dim=0)
         street_vec = torch.cat(street_batches_v, dim=0)
         dists = 2 - 2 * torch.matmul(fake_street_vec, street_vec.permute(1, 0))
@@ -119,6 +123,13 @@ if __name__ == '__main__':
                     'tp5:{tp5[0]:.2f}/{tp5[1]:.2f} tp10:{tp10[0]:.2f}/{tp10[1]:.2f} ' \
                     'tp1%:{tp1p[0]:.2f}/{tp1p[1]:.2f}'.format(epoch + 1, num=acc.num, tp1=acc.tp1,
                                                             tp5=acc.tp5, tp10=acc.tp10, tp1p=acc.tp1p))
+        
+        # tensorboard eval logging
+        writer.add_scalar('Loss/Val', np.mean(epoch_retrieval_loss_v), epoch)
+        writer.add_scalar('Recall/R@1', tp1[0], epoch)
+        writer.add_scalar('Recall/R@5', tp5[0], epoch)
+        writer.add_scalar('Recall/R@10', tp10[0], epoch)
+        writer.add_scalar('Recall/R@1%', tp1p[0], epoch)
 
         # Save the best model
         tp1_p2s_acc = acc.tp1[0]
