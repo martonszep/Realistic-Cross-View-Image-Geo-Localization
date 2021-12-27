@@ -1,13 +1,15 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import matplotlib.pyplot as plt
+import torchvision
+from data.cvusa_utils import convert_image_np
 
 # based on https://pytorch.org/tutorials/intermediate/spatial_transformer_tutorial.html
 class SpatialTransf (nn.Module):
     def __init__(self, in_channels, spatial_dims=None):
-
-
         super(SpatialTransf, self).__init__()
+
         self._in_ch = in_channels 
         self.spatial_dims = spatial_dims
 
@@ -29,7 +31,6 @@ class SpatialTransf (nn.Module):
             nn.MaxPool2d(2, stride=2),
             nn.BatchNorm2d(10),
             nn.ReLU(True),
-
             
             # Regressor for the 3 * 2 affine matrix
             # Lambda(lambda x: print(x.size())),
@@ -63,4 +64,36 @@ class Lambda(nn.Module):
         self.func = func
 
     def forward(self, x):
-        return self.func(x)   
+        return self.func(x) 
+
+class ComposedSpatialTransf (nn.Module):
+    def __init__(self, in_channels, spatial_dims):
+        super(ComposedSpatialTransf, self).__init__()
+
+        self.spatial_block = nn.Sequential(
+            SpatialTransf(in_channels, spatial_dims)
+        )
+
+    def forward(self, x):
+        return self.spatial_block(x)  
+
+    # def visualize_stn(self, data):
+    #     with torch.no_grad():
+
+    #         input_tensor = data.cpu()
+    #         transformed_input_tensor = self.forward(data).cpu()
+
+    #         in_grid = convert_image_np(
+    #             torchvision.utils.make_grid(input_tensor))
+
+    #         out_grid = convert_image_np(
+    #             torchvision.utils.make_grid(transformed_input_tensor))
+
+    #         # Plot the results side-by-side
+    #         f, axarr = plt.subplots(1, 2)
+    #         axarr[0].imshow(in_grid)
+    #         axarr[0].set_title('Dataset Satellite Images')
+
+    #         axarr[1].imshow(out_grid)
+    #         axarr[1].set_title('Transformed Satellite Images')
+    #     return f

@@ -17,7 +17,7 @@ class RandomHorizontalFlip(object):
 class ToTensor(object):
 
     def __call__(self, sample):
-        tanh_norm = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        tanh_norm = transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])
         for elem in sample.keys():
             tmp = sample[elem]
             tmp = np.array(tmp, dtype=np.float32).transpose((2, 0, 1))

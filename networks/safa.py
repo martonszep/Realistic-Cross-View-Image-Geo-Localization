@@ -30,7 +30,7 @@ class SA(nn.Module):
 # Siamese network w/ shared weights
 # class SAFA(nn.Module):
 #     #Modified version of "Spatial-Aware Feature Aggregation for Cross-View Image Based Geo-Localization" paper
-#     def __init__(self, sa_num=8, H1=112, W1=616, H2=112, W2=616):
+#     def __init__(self, sa_num=8, H1=112, W1=616, H2=112, W2=616, use_spatialtr=False):
 #         super().__init__()
 
 #         self.extract2 = backbones.ResNet34()
@@ -69,8 +69,8 @@ class SAFA(nn.Module):
     def __init__(self, sa_num=8, H1=112, W1=616, H2=112, W2=616, use_spatialtr=False):
         super().__init__()
 
-        # self.spatial_tr = spatial_transf.SpatialTransf(in_channels=3, spatial_dims=None) if use_spatialtr else None
-        self.spatial_tr = spatial_transf.SpatialTransf(in_channels=3, spatial_dims=(H2, W2)) if use_spatialtr else None
+        self.spatial_tr = spatial_transf.ComposedSpatialTransf(in_channels=3, spatial_dims=None) if use_spatialtr else None
+        # self.spatial_tr = spatial_transf.ComposedSpatialTransf(in_channels=3, spatial_dims=(H2, W2)) if use_spatialtr else None
 
         self.extract1 = backbones.ResNet34()
         self.extract2 = backbones.ResNet34()

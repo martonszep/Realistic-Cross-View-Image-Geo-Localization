@@ -26,7 +26,7 @@ class CVUSA(torch.utils.data.Dataset):
                 
                 items = line.strip().split(',')
                 if(len(items) == 1): # the small sanity check training set has a different separator in the csv
-                	items = line.strip().split(';')
+                    items = line.strip().split(';')
                     
                 item_id = (items[0].split('/')[-1]).split('.')[0]
                 if use_polar:
@@ -121,3 +121,21 @@ class CVUSA(torch.utils.data.Dataset):
         fmt_str += 'Dataset root : {}\n'.format(self.root)
         fmt_str += 'Image Transforms: {}\n'.format(self.transform_op.__repr__().replace('\n', '\n    '))
         return fmt_str
+
+def convert_image_np(inp):
+    """Convert a Tensor to numpy image."""
+
+    if inp.ndim == 3:
+        inp = inp.unsqueeze(0).numpy().transpose((0, 2, 3, 1))
+    elif inp.ndim == 4:
+        inp = inp.numpy().transpose((0, 2, 3, 1))
+    else:
+        raise ValueError('The input should be an image (ndim=3) or an array of images (ndim=4)!')
+    
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+
+    for i in range(inp.shape[0]):        
+        inp[i] = std * inp[i] + mean
+        inp[i] = np.clip(inp[i], 0, 1)
+    return inp

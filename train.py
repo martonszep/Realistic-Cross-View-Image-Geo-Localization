@@ -1,5 +1,5 @@
 from data.custom_transforms import *
-from data.cvusa_utils import CVUSA
+from data.cvusa_utils import CVUSA, convert_image_np
 from networks.c_gan import *
 from torch.utils.tensorboard import SummaryWriter
 from utils import rgan_wrapper, base_wrapper, parser
@@ -140,4 +140,13 @@ if __name__ == '__main__':
 
         # Program statistics
         rss, vms = get_sys_mem()
-        log_print('Memory usage: rss={:.2f}GB vms={:.2f}GB Time:{:.2f}s'.format(rss, vms, time.time() - start_time))
+        log_print('Memory usage: rss={:.2f}GB vms={:.2f}GB Time:{:.2f}s\n'.format(rss, vms, time.time() - start_time))
+
+    # Visualize the STN transformation on some input batch
+    if opt.polar is False:
+        with torch.no_grad():
+            images = next(iter(val_loader))['satellite'][:16].to(rgan_wrapper.device)
+            transformed_images = rgan_wrapper.retrieval.module.spatial_tr(images)
+            writer.add_images(f"Spatial Transformer/Inputs", convert_image_np(images.cpu()), dataformats='NHWC')
+            writer.add_images(f"Spatial Transformer/Outputs", convert_image_np(transformed_images.cpu()), dataformats='NHWC')
+            writer.close()
