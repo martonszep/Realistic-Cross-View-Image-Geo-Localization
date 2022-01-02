@@ -99,14 +99,19 @@ if __name__ == '__main__':
         # if (epoch + 1) % opt.save_step == 0:
         #     rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc)
 
+        torch.cuda.empty_cache() # PyTorch thing
+        # print(torch.cuda.memory_allocated())
+        # print(torch.cuda.memory_reserved())
+
         # rgan_wrapper.generator.eval()
         rgan_wrapper.retrieval.eval()
-        for i, data in enumerate(val_loader):
-            rgan_wrapper.set_input(data)
-            rgan_wrapper.eval_model()
-            fake_street_batches_v.append(rgan_wrapper.fake_street_out_val.cpu().data)
-            street_batches_v.append(rgan_wrapper.street_out_val.cpu().data)
-            epoch_retrieval_loss_v.append(rgan_wrapper.r_loss.item())
+        with torch.no_grad():
+            for i, data in enumerate(val_loader):
+                rgan_wrapper.set_input(data)
+                rgan_wrapper.eval_model()
+                fake_street_batches_v.append(rgan_wrapper.fake_street_out_val.cpu().data)
+                street_batches_v.append(rgan_wrapper.street_out_val.cpu().data)
+                epoch_retrieval_loss_v.append(rgan_wrapper.r_loss.item())
         
         fake_street_vec = torch.cat(fake_street_batches_v, dim=0)
         street_vec = torch.cat(street_batches_v, dim=0)
@@ -114,6 +119,8 @@ if __name__ == '__main__':
         tp1 = rgan_wrapper.mutual_topk_acc(dists, topk=1)
         tp5 = rgan_wrapper.mutual_topk_acc(dists, topk=5)
         tp10 = rgan_wrapper.mutual_topk_acc(dists, topk=10)
+        street_batches_v.clear()
+        fake_street_batches_v.clear()
 
         num = len(dists)
         tp1p = rgan_wrapper.mutual_topk_acc(dists, topk=0.01 * num)

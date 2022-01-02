@@ -15,8 +15,8 @@ class RGANWrapper(BaseModel):
         self.retrieval = net_R
         # self.discriminator = net_D
 
-        self.criterion = GANLoss(opt.gan_loss).to(opt.device)
-        self.criterion_l1 = torch.nn.L1Loss()
+        # self.criterion = GANLoss(opt.gan_loss).to(opt.device)
+        # self.criterion_l1 = torch.nn.L1Loss()
 
         # Optimizers
         # self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=opt.lr_d, betas=(opt.b1, opt.b2))
