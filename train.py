@@ -99,7 +99,8 @@ if __name__ == '__main__':
         # if (epoch + 1) % opt.save_step == 0:
         #     rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc)
 
-        torch.cuda.empty_cache() # PyTorch thing
+        # Free up cached GPU memory used by PyTorch. This might result in an "unhealthy" computation graph.
+        # torch.cuda.empty_cache() 
         # print(torch.cuda.memory_allocated())
         # print(torch.cuda.memory_reserved())
 

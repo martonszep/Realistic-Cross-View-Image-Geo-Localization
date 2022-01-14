@@ -51,11 +51,11 @@ class SpatialTransf (nn.Module):
         theta = theta.view(-1, 2, 3) # 2D affine transf param
 
         if self.spatial_dims is not None:
-            grid = F.affine_grid(theta, (x.size(0), self._in_ch, *self.spatial_dims))
+            grid = F.affine_grid(theta, (x.size(0), self._in_ch, *self.spatial_dims), align_corners=False)
         else:
-            grid = F.affine_grid(theta, (x.size()))
+            grid = F.affine_grid(theta, x.size(), align_corners=False)
         
-        x = F.grid_sample(x, grid, mode='bilinear')
+        x = F.grid_sample(x, grid, mode='bilinear', align_corners=False)
 
         return x     
 
