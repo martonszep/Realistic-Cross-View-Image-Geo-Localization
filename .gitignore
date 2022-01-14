@@ -129,6 +129,7 @@ dmypy.json
 .pyre/
 
 # Dataset, output
+data/VIGOR
 data/CVUSA
 output/*
 
