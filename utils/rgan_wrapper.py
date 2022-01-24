@@ -160,4 +160,4 @@ class RGANWrapper(BaseModel):
         # self.optimizer_D = ckpt['optimizer_D_dict']
 
         self.retrieval.load_state_dict(retrieval_dict)
-        self.optimizer_R = ckpt['optimizer_R_dict']
+        self.optimizer_R.load_state_dict(ckpt['optimizer_R_dict'])

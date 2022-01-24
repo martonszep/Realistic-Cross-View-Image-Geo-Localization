@@ -61,13 +61,13 @@ def polar_transform_CVUSA(input_dir, output_dir):
 
   for i, img in enumerate(images):
     if i % 1000:
-    	print('image=', i)
+        print('image=', i)
     signal = imageio.imread(input_dir + img)
     image = sample_bilinear(signal, x, y)
-    img_uint = image.astype(np.uint8)
-    imageio.imsave(output_dir + img,  img_uint)
+    # img_uint = image.astype(np.uint8)
+    imageio.imsave(output_dir + img,  image)
     
-	
+    
 
 ############################ Apply Polar Transform to Aerial Images in CVACT Dataset #############################
 def polar_transform_CVACT(input_dir, output_dir):

@@ -13,7 +13,7 @@ class Parser():
         parser.add_argument('--name', type=str, default='', help=' ')
         parser.add_argument('--seed', type=int, default=10)
         parser.add_argument('--phase', type=str, default='train', help='')
-        parser.add_argument('--gpu_ids', type=str, default='0,1', help='gpu ids: e.g. 0  0,1') # in colab we seem to have one gpu with id "0"
+        parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1') # in colab we seem to have one gpu with id "0"
 
         parser.add_argument('--isTrain', default=True, action='store_true')
         parser.add_argument('--resume', type=str, default='', help='model to load from `--results_dir`')
@@ -26,11 +26,16 @@ class Parser():
         parser.add_argument('--polar', default=False, action='store_true', help='True -> polar transf; False -> spatial transf')
         # parser.add_argument('--save_step', type=int, default=10)
 
-        parser.add_argument('--rgan_checkpoint', type=str, default=None)
+        #vigor parameters 
+        parser.add_argument('--vigor_mode', type=str, default= 'train_SAFA_CVM-loss-same') # dataloader will use substrings of it
+        parser.add_argument('--vigor_root', type=str, default= './data/VIGOR')
+        parser.add_argument('--vigor_dim', type=str, default=4096) # ???
+
+        parser.add_argument('--rgan_checkpoint', type=str, default="")
 
         #train parameters
-        parser.add_argument("--n_epochs", type=int, default=10, help="number of epochs of combined training")
-        parser.add_argument("--batch_size", type=int, default=24, help="size of the batches")
+        parser.add_argument("--n_epochs", type=int, default=5, help="number of epochs of combined training")
+        parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
         #parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
         #parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_r", type=float, default=0.0001, help="adam: learning rate")
@@ -57,8 +62,8 @@ class Parser():
         parser.add_argument("--realout_c", type=int, default=3)
         parser.add_argument("--n_layers", type=int, default=3)
         parser.add_argument("--feature_c", type=int, default=64)
-        parser.add_argument('--g_model', type=str, default='separate-weights')
-        parser.add_argument('--d_model', type=str, default='spatialtr')
+        parser.add_argument('--g_model', type=str, default='vigor')
+        parser.add_argument('--d_model', type=str, default='no_polar')
         parser.add_argument('--r_model', type=str, default='SAFA')
         parser.add_argument('--gan_loss', type=str, default='vanilla')
 

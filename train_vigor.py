@@ -1,5 +1,6 @@
 from data.custom_transforms import *
 from data.cvusa_utils import CVUSA, convert_image_np
+from data.vigor_dataloader import DataLoader
 from networks.c_gan import *
 from torch.utils.tensorboard import SummaryWriter
 from utils import rgan_wrapper, base_wrapper, parser
@@ -36,14 +37,23 @@ if __name__ == '__main__':
     # Configure data loader
     composed_transforms = transforms.Compose([RandomHorizontalFlip(),
                                                 ToTensor()])
-    train_dataset = CVUSA(root=opt.data_root, csv_file=opt.train_csv, use_polar=opt.polar, name=opt.name,
-                        transform_op=composed_transforms, load_pickle=None)
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=0)
+    # train_dataset = CVUSA(root=opt.data_root, csv_file=opt.train_csv, use_polar=opt.polar, name=opt.name,
+    #                     transform_op=composed_transforms, load_pickle=None)
+    # train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=0)
 
-    val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, use_polar=opt.polar, name=opt.name,
-                        transform_op=ToTensor(), load_pickle=None)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=0)
-    log_print('Load datasets from {}: train_set={} val_set={}'.format(opt.data_root, len(train_dataset), len(val_dataset)))
+    dataloader = DataLoader(mode=opt.vigor_mode, root=opt.vigor_root, dim=opt.vigor_dim, same_area=True if 'same' in opt.vigor_mode else False)
+    break_iter = int(dataloader.train_data_size / opt.batch_size)
+
+    # val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, use_polar=opt.polar, name=opt.name,
+    #                     transform_op=ToTensor(), load_pickle=None)
+    # val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=0)
+    # log_print('Load datasets from {}: train_set={} val_set={}'.format(opt.data_root, len(train_dataset), len(val_dataset)))
+
+    # for i, data in enumerate(val_loader):
+    #     print(data)
+    #     print(data["street"].shape, data["satellite"].shape)
+    #     break
+
 
     ret_best_acc = rgan_wrapper.ret_best_acc
     log_print('Start training from epoch {} to {}, best acc: {}'.format(opt.start_epoch, opt.n_epochs, ret_best_acc))
@@ -57,27 +67,55 @@ if __name__ == '__main__':
         street_batches_v = []
         fake_street_batches_v = []
         epoch_retrieval_loss_v= []
-        # epoch_generator_loss = []
-        # epoch_discriminator_loss = []
+        
         log_print('>>> RGAN Epoch {}'.format(epoch))
-        # rgan_wrapper.generator.train()
-        # rgan_wrapper.discriminator.train()
+       
         rgan_wrapper.retrieval.train()
-        for i, data in enumerate(train_loader):  # inner loop within one epoch
-            if i == 0:
+        iter = 0
+        while True:
+        # for i, data in enumerate(train_loader):  # inner loop within one epoch
+            if iter == 0:
                 start_time_batches = time.time()
-            # print(data["satellite"].shape, data["street"].shape)
+
+            batch_sat, batch_grd, _, _ = dataloader.get_next_batch(opt.batch_size)
+            # we get here: batch_sat -> (batch_size, 320, 320, 3), batch_grd -> (batch_size, 320, 640, 3)
+            composed_data = {
+                "satellite": None,
+                "street": None
+            }
+            for i, elem in enumerate(batch_sat):
+                data_to_be_transformed = {
+                    "satellite": batch_sat[i],
+                    "street": batch_grd[i]
+                }
+                transformed_data = composed_transforms(data_to_be_transformed)
+                if i == 0:
+                    composed_data["satellite"] = transformed_data["satellite"].unsqueeze(0)
+                    composed_data["street"] = transformed_data["street"].unsqueeze(0)
+                else:
+                    composed_data["satellite"] = torch.cat((composed_data["satellite"],  transformed_data["satellite"].unsqueeze(0)), 0)
+                    composed_data["street"] = torch.cat((composed_data["street"],  transformed_data["street"].unsqueeze(0)), 0)
+            
+            # print(composed_data)
+            # print(composed_data["satellite"].shape, composed_data["street"].shape)
             # raise Exception ("interrupt execution for debugging")
-            rgan_wrapper.set_input(data)
+            if batch_sat is None or iter == break_iter:
+                break
+
+            # we transformed the data into
+            #       composed_data -> {"satellite": torch.Size([batch_size, 3, 320, 320]), "street": torch.Size([batch_size, 3, 320, 640])}
+            rgan_wrapper.set_input(composed_data)
             rgan_wrapper.optimize_parameters(epoch)
 
             fake_street_batches_t.append(rgan_wrapper.fake_street_out.cpu().data)
             street_batches_t.append(rgan_wrapper.street_out.cpu().data)
             epoch_retrieval_loss_t.append(rgan_wrapper.r_loss.item())
-            # epoch_discriminator_loss.append(rgan_wrapper.d_loss.item())
-            # epoch_generator_loss.append(rgan_wrapper.g_loss.item())
-
-            if (i + 1) % 40 == 0 or (i + 1) == len(train_loader):
+           
+            # if (iter + 1) % 40 == 0 or (iter + 1) == break_iter:
+            #     print("batch=", iter+1)
+            #     print("time=", time.time() - start_time_batches)
+            #     start_time_batches = time.time()
+            if (iter + 1) % 40 == 0 or (iter + 1) == break_iter:
                 fake_street_vec = torch.cat(fake_street_batches_t, dim=0)
                 street_vec = torch.cat(street_batches_t, dim=0)
                 dists = 2 - 2 * torch.matmul(fake_street_vec, street_vec.permute(1, 0))
@@ -85,11 +123,13 @@ if __name__ == '__main__':
                 tp5 = rgan_wrapper.mutual_topk_acc(dists, topk=5)
                 tp10 = rgan_wrapper.mutual_topk_acc(dists, topk=10)
                 log_print('Batch:{} loss={:.3f} samples:{} tp1={tp1[0]:.2f}/{tp1[1]:.2f} ' \
-                        'tp5={tp5[0]:.2f}/{tp5[1]:.2f} Time:{time:.2f}s'.format(i + 1, np.mean(epoch_retrieval_loss_t),
+                        'tp5={tp5[0]:.2f}/{tp5[1]:.2f} Time:{time:.2f}s'.format(iter + 1, np.mean(epoch_retrieval_loss_t),
                                                 len(dists), tp1=tp1, tp5=tp5, time=time.time() - start_time_batches))
                 start_time_batches = time.time()
                 street_batches_t.clear()
                 fake_street_batches_t.clear()
+
+            iter+=1
         
         writer.add_scalar('Loss/Train', np.mean(epoch_retrieval_loss_t), epoch) # tensorboard logging
 
@@ -104,19 +144,67 @@ if __name__ == '__main__':
         # print(torch.cuda.memory_allocated())
         # print(torch.cuda.memory_reserved())
 
-        # rgan_wrapper.generator.eval()
         rgan_wrapper.retrieval.eval()
         with torch.no_grad():
-            for i, data in enumerate(val_loader):
-                rgan_wrapper.set_input(data)
+            # for i, data in enumerate(val_loader):
+            val_i = 0
+            # out = 0
+            while True:
+                if val_i == 0:
+                    start_time_batches = time.time()
+
+                # we get here: batch_sat -> (batch_size, 320, 320, 3), batch_grd -> (batch_size, 320, 640, 3)
+                batch_sat = dataloader.next_sat_scan(opt.batch_size*2)
+                batch_grd = dataloader.next_grd_scan(opt.batch_size*2)
+                # if out == 1:
+                #     print(batch_grd.shape)
+                # if batch_grd is None:
+                #     print("**********batch_grd is out")
+                #     out = 1
+                
+                # terminate after around 30k images, as 50k images will take too much memory in cpu
+                if val_i > 120 or batch_grd is None: # there are less street views than sat images, so we only go as far as that
+                    break
+                
+                composed_data = {
+                    "satellite": None,
+                    "street": None
+                }
+                for i, elem in enumerate(batch_grd):
+                    data_to_be_transformed = {
+                        "satellite": batch_sat[i],
+                        "street": batch_grd[i]
+                    }
+                    transformed_data = composed_transforms(data_to_be_transformed)
+                    if i == 0:
+                        composed_data["satellite"] = transformed_data["satellite"].unsqueeze(0)
+                        composed_data["street"] = transformed_data["street"].unsqueeze(0)
+                    else:
+                        composed_data["satellite"] = torch.cat((composed_data["satellite"],  transformed_data["satellite"].unsqueeze(0)), 0)
+                        composed_data["street"] = torch.cat((composed_data["street"],  transformed_data["street"].unsqueeze(0)), 0)
+                
+                # print(composed_data)
+                # print(composed_data["satellite"].shape, composed_data["street"].shape)
+
+                # we transformed the data into
+                    #       composed_data -> {"satellite": torch.Size([batch_size, 3, 320, 320]), "street": torch.Size([batch_size, 3, 320, 640])}
+                rgan_wrapper.set_input(composed_data)
                 rgan_wrapper.eval_model()
                 fake_street_batches_v.append(rgan_wrapper.fake_street_out_val.cpu().data)
                 street_batches_v.append(rgan_wrapper.street_out_val.cpu().data)
                 epoch_retrieval_loss_v.append(rgan_wrapper.r_loss.item())
+
+                if (val_i + 1) % 40 == 0:
+                    print("val batch=", val_i+1)
+                    print("val time=", time.time() - start_time_batches)
+                    start_time_batches = time.time()
+
+                val_i += 1
         
         fake_street_vec = torch.cat(fake_street_batches_v, dim=0)
         street_vec = torch.cat(street_batches_v, dim=0)
-        dists = 2 - 2 * torch.matmul(fake_street_vec, street_vec.permute(1, 0))
+        street_vec_permuted = street_vec.permute(1, 0)
+        dists = 2 - 2 * torch.matmul(fake_street_vec, street_vec_permuted)
         tp1 = rgan_wrapper.mutual_topk_acc(dists, topk=1)
         tp5 = rgan_wrapper.mutual_topk_acc(dists, topk=5)
         tp10 = rgan_wrapper.mutual_topk_acc(dists, topk=10)
