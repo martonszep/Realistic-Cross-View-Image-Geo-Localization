@@ -31,7 +31,7 @@ class Parser():
         parser.add_argument('--vigor_root', type=str, default= './data/VIGOR')
         parser.add_argument('--vigor_dim', type=str, default=4096) # ???
 
-        parser.add_argument('--rgan_checkpoint', type=str, default="")
+        parser.add_argument('--rgan_checkpoint', type=str, default=None) # default=None
 
         #train parameters
         parser.add_argument("--n_epochs", type=int, default=5, help="number of epochs of combined training")

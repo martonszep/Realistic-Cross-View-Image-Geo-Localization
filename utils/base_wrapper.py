@@ -20,8 +20,15 @@ class BaseModel(ABC):
     def set_input(self, batch):
         sate_ims = batch['satellite']
         pano_ims = batch['street']
-        self.satellite = sate_ims.to(self.device)
-        self.street = pano_ims.to(self.device)
+        if sate_ims is not None:
+            self.satellite = sate_ims.to(self.device)
+        else:
+            self.satellite = None
+
+        if pano_ims is not None:
+            self.street = pano_ims.to(self.device)
+        else:
+            self.street = None
 
     def set_input_cvact(self, data, utm):
         sate_ims = data['satellite']

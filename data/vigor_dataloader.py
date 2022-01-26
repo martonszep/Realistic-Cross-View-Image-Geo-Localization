@@ -12,7 +12,7 @@ class DataLoader:
     # please modify the root
     # root = '../Realistic-Cross-View-Image-Geo-Localization/data/VIGOR'
 
-    def __init__(self, mode='', root="", dim=4096, same_area=True):
+    def __init__(self, mode='', root="", dim=4096, same_area=True, logger=print):
         self.mode = mode
         self.root = root
         self.sat_size = [160, 160]  # [320, 320] 
@@ -21,8 +21,8 @@ class DataLoader:
         label_root = 'splits'
 
         if same_area:
-            self.train_city_list = ['NewYork', 'Seattle', 'SanFrancisco', 'Chicago']
-            self.test_city_list = ['NewYork', 'Seattle', 'SanFrancisco', 'Chicago']
+            self.train_city_list = ['NewYork'] # 'NewYork', 'Seattle', 'SanFrancisco', 'Chicago'
+            self.test_city_list = ['NewYork'] # 'NewYork', 'Seattle', 'SanFrancisco', 'Chicago'
         else:
             self.train_city_list = ['NewYork', 'Seattle']
             self.test_city_list = ['SanFrancisco', 'Chicago']
@@ -39,10 +39,11 @@ class DataLoader:
                     self.train_sat_list.append(os.path.join(self.root, city, 'satellite', line.replace('\n', '')))
                     self.train_sat_index_dict[line.replace('\n', '')] = idx
                     idx += 1
-            print('InputData::__init__: load', train_sat_list_fname, idx)
+            logger('InputData::__init__: load {} {}'.format(train_sat_list_fname, idx))
+
         self.train_sat_list = np.array(self.train_sat_list)
         self.train_sat_data_size = len(self.train_sat_list)
-        print('Train sat loaded, data size:{}'.format(self.train_sat_data_size))
+        logger('Train sat loaded, data size:{}'.format(self.train_sat_data_size))
 
         self.test_sat_list = []
         self.test_sat_index_dict = {}
@@ -55,11 +56,14 @@ class DataLoader:
                     self.test_sat_list.append(os.path.join(self.root, city, 'satellite', line.replace('\n', '')))
                     self.test_sat_index_dict[line.replace('\n', '')] = idx
                     idx += 1
-            print('InputData::__init__: load', test_sat_list_fname, idx)
+           
+            logger('InputData::__init__: load {} {}'.format(test_sat_list_fname, idx))
+            
         self.test_sat_list = np.array(self.test_sat_list)
         self.test_sat_data_size = len(self.test_sat_list)
-        print('Test sat loaded, data size:{}'.format(self.test_sat_data_size))
-
+        
+        logger('Test sat loaded, data size:{}'.format(self.test_sat_data_size))
+        
         self.train_list = []
         self.train_label = []
         self.train_sat_cover_dict = {}
@@ -85,11 +89,14 @@ class DataLoader:
                     else:
                         self.train_sat_cover_dict[label[0]].append(idx)
                     idx += 1
-            print('InputData::__init__: load ', train_label_fname, idx)
+            
+            logger('InputData::__init__: load {} {}'.format(train_label_fname, idx))
+            
         self.train_data_size = len(self.train_list)
         self.train_label = np.array(self.train_label)
         self.train_delta = np.array(self.train_delta)
-        print('Train grd loaded, data_size: {}'.format(self.train_data_size))
+        
+        logger('Train grd loaded, data_size: {}'.format(self.train_data_size))
 
         self.__cur_test_id = 0
         self.test_list = []
@@ -117,11 +124,14 @@ class DataLoader:
                     else:
                         self.test_sat_cover_dict[label[0]].append(idx)
                     idx += 1
-            print('InputData::__init__: load ', test_label_fname, idx)
+           
+            logger('InputData::__init__: load {} {}'.format(test_label_fname, idx))
+            
         self.test_data_size = len(self.test_list)
         self.test_label = np.array(self.test_label)
         self.test_delta = np.array(self.test_delta)
-        print('Test grd loaded, data size: {}'.format(self.test_data_size))
+        
+        logger('Test grd loaded, data size: {}'.format(self.test_data_size))
 
         self.train_sat_cover_list = list(self.train_sat_cover_dict.keys())
 
@@ -358,8 +368,8 @@ class DataLoader:
                 batch_list = []
                 for batch_idx in range(batch_size):
                     while True:
-                        img_idx = self.get_init_idx()
-                        if self.check_overlap(batch_list, img_idx):
+                        img_idx = self.get_init_idx() # get a random index
+                        if self.check_overlap(batch_list, img_idx): # check that the new set image is not the same as any sat images already in batch
                             break
                     
                     # to look for corrupt images, insert code here
@@ -369,6 +379,7 @@ class DataLoader:
                     delta_list[batch_idx, :] = delta
                     batch_list.append(img_idx)
                     
+                # print("-------------------batch ready")
                 return batch_sat, batch_grd, np.array(batch_list), delta_list
 
     def get_by_idx(self, img_idx=None, mode='train'):
@@ -377,7 +388,8 @@ class DataLoader:
             raise Exception
         else:
             ## read sat image
-            img = cv2.imread(self.train_sat_list[self.train_label[img_idx][0]])
+            img = cv2.imread(self.train_sat_list[self.train_label[img_idx][0]]) # to the panorama index the corresponding pos sat image is loaded in
+            # print("*******image path=", self.train_sat_list[img_idx])
             if img is None:
                 print(
                     'InputData::get by idx: read fail: %s, ' % (self.train_sat_list[self.train_label[img_idx][0]]))
@@ -392,7 +404,8 @@ class DataLoader:
             ## read grd image
             # ground
             # to look for corrupt images, insert code here
-            print("image path=", self.train_list[img_idx])
+            # print("*******image path=", self.train_list[img_idx])
+            # print("*******image idx=", img_idx)
             img = cv2.imread(self.train_list[img_idx])
             if img is None:
                 print('InputData::get by idx: read fail: %s, ' % (self.train_list[img_idx]))
@@ -404,6 +417,7 @@ class DataLoader:
             img[:, :, 1] -= 116.779  # Green
             img[:, :, 2] -= 123.6  # Red
             image_grd = img
+            # cv2.imwrite(f"../{img_idx}.jpg", image_grd)
 
             if 'continuous' in mode:
                 randx = random.randrange(1, 4)
