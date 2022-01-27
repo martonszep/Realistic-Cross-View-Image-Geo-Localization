@@ -37,11 +37,11 @@ if __name__ == '__main__':
     composed_transforms = transforms.Compose([RandomHorizontalFlip(),
                                                 ToTensor()])
     train_dataset = CVUSA(root=opt.data_root, csv_file=opt.train_csv, use_polar=opt.polar, name=opt.name,
-                        transform_op=composed_transforms, load_pickle=None)
+                        transform_op=composed_transforms)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=0)
 
     val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, use_polar=opt.polar, name=opt.name,
-                        transform_op=ToTensor(), load_pickle=None)
+                        transform_op=ToTensor())
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=0)
     log_print('Load datasets from {}: train_set={} val_set={}'.format(opt.data_root, len(train_dataset), len(val_dataset)))
 

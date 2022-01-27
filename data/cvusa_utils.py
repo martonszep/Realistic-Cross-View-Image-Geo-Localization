@@ -6,7 +6,7 @@ import _pickle as cPickle
 
 
 class CVUSA(torch.utils.data.Dataset):
-    def __init__(self, root, csv_file, sate_size=(256, 256), pano_size=(616, 112), use_polar=False, name=None, transform_op=None, load_pickle=None):
+    def __init__(self, root, csv_file, sate_size=(256, 256), pano_size=(616, 112), use_polar=False, name=None, transform_op=None):
         self.root = root
         self.name = name
         self.use_polar = use_polar
@@ -14,7 +14,6 @@ class CVUSA(torch.utils.data.Dataset):
         self.pano_size = pano_size if use_polar else pano_size
         self.csv_path = os.path.join(root, csv_file)
         self.transform_op = transform_op
-        self.load_pickle = load_pickle
         self.filename = "CVUSA_preprocessed"
 
         # Load image list
@@ -41,33 +40,7 @@ class CVUSA(torch.utils.data.Dataset):
                 
         self.pano_ims, self.sate_ims, self.pano_ann, self.item_ids = pano_ims, sate_ims, pano_ann, item_ids
         self.num = len(self.pano_ims)
-        print('Load data from {}, total {}'.format(csv_path, self.num))
-        
-        # Load all images at once if load_pickle is not None
-        if self.load_pickle is not None:
-            
-            # Load dataset object from pickle if load_pickle is True
-            if self.load_pickle == True:
-                self.load()
-                print("Dataset object has been loaded!")
-            else:
-                self.data = []
-                for pos_id in range(self.num):
-                    sate_path = os.path.join(self.root, self.sate_ims[pos_id])
-                    pano_path = os.path.join(self.root, self.pano_ims[pos_id])
-                    
-                    # Load and process images
-                    sate_im = self.load_im(sate_path, resize=self.sate_size)
-                    pano_im = self.load_im(pano_path, resize=self.pano_size)
-                    sample = {'satellite': sate_im, 'street': pano_im}
-                    if self.transform_op:
-                        sample = self.transform_op(sample)
-                    sample['im_path'] = (sate_path, pano_path)
-                    sample['item_id'] = self.item_ids[pos_id]
-                    self.data.append(sample)
-                self.save()
-                print("Dataset object has been saved!")
-                
+        print('Load data from {}, total {}'.format(csv_path, self.num))               
 
     @classmethod
     def load_im(self, im_path, resize=None):
@@ -93,23 +66,20 @@ class CVUSA(torch.utils.data.Dataset):
 
 
     def __getitem__(self, index):
-        if self.load_pickle is not None:
-            return self.data[index]
-        else:
-            # Triplet construction
-            pos_id = index
-            sate_path = os.path.join(self.root, self.sate_ims[pos_id])
-            pano_path = os.path.join(self.root, self.pano_ims[pos_id])
-            # Load and process images
-            
-            sate_im = self.load_im(sate_path, resize=self.sate_size)
-            pano_im = self.load_im(pano_path, resize=self.pano_size)
-            sample = {'satellite': sate_im, 'street': pano_im}
-            if self.transform_op:
-                sample = self.transform_op(sample)
-            sample['im_path'] = (sate_path, pano_path)
-            sample['item_id'] = self.item_ids[pos_id]
-            return sample
+        # Triplet construction
+        pos_id = index
+        sate_path = os.path.join(self.root, self.sate_ims[pos_id])
+        pano_path = os.path.join(self.root, self.pano_ims[pos_id])
+        # Load and process images
+        
+        sate_im = self.load_im(sate_path, resize=self.sate_size)
+        pano_im = self.load_im(pano_path, resize=self.pano_size)
+        sample = {'satellite': sate_im, 'street': pano_im}
+        if self.transform_op:
+            sample = self.transform_op(sample)
+        sample['im_path'] = (sate_path, pano_path)
+        sample['item_id'] = self.item_ids[pos_id]
+        return sample
 
     def __len__(self):
         return self.num
