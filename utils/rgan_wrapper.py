@@ -15,8 +15,8 @@ class RGANWrapper(BaseModel):
         self.retrieval = net_R
         # self.discriminator = net_D
 
-        self.criterion = GANLoss(opt.gan_loss).to(opt.device)
-        self.criterion_l1 = torch.nn.L1Loss()
+        # self.criterion = GANLoss(opt.gan_loss).to(opt.device)
+        # self.criterion_l1 = torch.nn.L1Loss()
 
         # Optimizers
         # self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=opt.lr_d, betas=(opt.b1, opt.b2))
@@ -51,6 +51,9 @@ class RGANWrapper(BaseModel):
     def backward_R(self, epoch):
 
         self.fake_street_out, self.street_out = self.retrieval(self.street, self.satellite)
+        # self.r_loss = self.soft_margin_triplet_loss(self.fake_street_out, self.street_out, loss_weight=self.opt.lambda_sm, hard_topk_ratio=self.opt.hard_topk_ratio)
+
+        # Scheduled hard negative mining
         if epoch <= 20:
             self.r_loss = self.soft_margin_triplet_loss(self.fake_street_out, self.street_out, loss_weight=self.opt.lambda_sm, hard_topk_ratio=self.opt.hard_topk_ratio)
         elif epoch > 20 and epoch <=40:
@@ -160,4 +163,4 @@ class RGANWrapper(BaseModel):
         # self.optimizer_D = ckpt['optimizer_D_dict']
 
         self.retrieval.load_state_dict(retrieval_dict)
-        self.optimizer_R = ckpt['optimizer_R_dict']
+        self.optimizer_R.load_state_dict(ckpt['optimizer_R_dict'])

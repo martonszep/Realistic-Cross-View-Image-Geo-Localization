@@ -13,7 +13,7 @@ class Parser():
         parser.add_argument('--name', type=str, default='', help=' ')
         parser.add_argument('--seed', type=int, default=10)
         parser.add_argument('--phase', type=str, default='train', help='')
-        parser.add_argument('--gpu_ids', type=str, default='0,1', help='gpu ids: e.g. 0  0,1') # in colab we seem to have one gpu with id "0"
+        parser.add_argument('--gpu_ids', type=str, default='0,1', help='gpu ids: e.g. 0  0,1')
 
         parser.add_argument('--isTrain', default=True, action='store_true')
         parser.add_argument('--resume', type=str, default='', help='model to load from `--results_dir`')
@@ -23,16 +23,16 @@ class Parser():
         parser.add_argument('--data_root', type=str, default= './data/CVUSA')
         parser.add_argument('--train_csv', type=str, default='train-19zl.csv')
         parser.add_argument('--val_csv', type=str, default='val-19zl.csv')
-        parser.add_argument('--polar', default=True, action='store_true')
+        parser.add_argument('--polar', default=True, action='store_true', help='True -> polar transf; False -> spatial transf')
         # parser.add_argument('--save_step', type=int, default=10)
 
         parser.add_argument('--rgan_checkpoint', type=str, default=None)
 
         #train parameters
-        parser.add_argument("--n_epochs", type=int, default=20, help="number of epochs of combined training")
-        parser.add_argument("--batch_size", type=int, default=24, help="size of the batches")
-        parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
-        parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
+        parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of combined training")
+        parser.add_argument("--batch_size", type=int, default=52, help="size of the batches")
+        #parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
+        #parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_r", type=float, default=0.0001, help="adam: learning rate")
 
         parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
@@ -57,7 +57,7 @@ class Parser():
         parser.add_argument("--realout_c", type=int, default=3)
         parser.add_argument("--n_layers", type=int, default=3)
         parser.add_argument("--feature_c", type=int, default=64)
-        parser.add_argument('--g_model', type=str, default='shared-weights')
+        parser.add_argument('--g_model', type=str, default='separate')
         parser.add_argument('--d_model', type=str, default='polar')
         parser.add_argument('--r_model', type=str, default='SAFA')
         parser.add_argument('--gan_loss', type=str, default='vanilla')
@@ -97,8 +97,7 @@ class Parser():
 
         # save to the disk
         if opt.resume == '':
-            prefix = '{}_{}_lrg{}_lrd{}_lrr{}_batch{}_{}'.format(opt.g_model, opt.d_model, opt.lr_g,
-                                                                opt.lr_d, opt.lr_r, opt.batch_size,
+            prefix = '{}_{}_lrr{}_batch{}_{}'.format(opt.g_model, opt.d_model, opt.lr_r, opt.batch_size,
                                                                 time.strftime("%Y%m%d-%H%M%S"))
             out_dir = os.path.join(opt.results_dir, prefix)
             os.makedirs(out_dir)
