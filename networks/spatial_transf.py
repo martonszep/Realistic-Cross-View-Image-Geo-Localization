@@ -1,7 +1,9 @@
-from turtle import forward
+import itertools
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+from networks.tps import TPSGridGen
 
 class AffineLocalization(nn.Module):
     def __init__(self, in_channels, sate_input=True) -> None:
@@ -44,32 +46,85 @@ class AffineLocalization(nn.Module):
     def forward(self, x):
         return self.localization(x)
 
-# based on https://pytorch.org/tutorials/intermediate/spatial_transformer_tutorial.html
+class TPSLocalization(nn.Module):
+    def __init__(self, in_channels,  grid_height, grid_width, target_control_points, sate_input=True, bounded = False) -> None:
+        super(TPSLocalization, self).__init__()
+
+        self.bounded = bounded
+
+        # Fully connected input size for images of size (256, 256) or (112, 616)
+        fc_size = 13*13 if sate_input==True else 4*36
+
+        # Thin plate spline spatial transformer localization-network
+        self.localization = nn.Sequential(
+            nn.Conv2d(in_channels, 8, kernel_size=7),
+            nn.MaxPool2d(2, stride=2),
+            nn.BatchNorm2d(8),
+            nn.ReLU(True),
+            nn.Conv2d(8, 10, kernel_size=5),
+            nn.MaxPool2d(2, stride=2),
+            nn.BatchNorm2d(10),
+            nn.ReLU(True),
+            nn.Conv2d(10, 10, kernel_size=3),
+            nn.MaxPool2d(2, stride=2),
+            nn.BatchNorm2d(10),
+            nn.ReLU(True),
+            nn.Conv2d(10, 10, kernel_size=3),
+            nn.MaxPool2d(2, stride=2),
+            nn.BatchNorm2d(10),
+            nn.ReLU(True),
+            
+            # Lambda(lambda x: print(x.size())),
+            Lambda(lambda x: x.view(-1, 10 * fc_size)),
+            nn.Linear(10 * fc_size, 64),
+            nn.ReLU(True),
+            nn.Linear(64, grid_height * grid_width * 2)
+        )
+
+        # Initialize the weights/bias
+        bias = torch.atanh(target_control_points).view(-1) if self.bounded else target_control_points.view(-1)
+        self.localization[-1].bias.data.copy_(bias)
+        self.localization[-1].weight.data.zero_()        
+
+    def forward(self, x):
+        batch_size = x.size(0)
+        points = F.tanh(self.localization(x)) if self.bounded else self.localization(x)
+        return points.view(batch_size, -1, 2)
+
+# Extension of https://pytorch.org/tutorials/intermediate/spatial_transformer_tutorial.html
 class SpatialTransf (nn.Module):
-    def __init__(self, in_channels, spatial_dims=None, sate_input=True, tps=True):
+    def __init__(self, in_channels, spatial_dims, sate_input=True, use_tps=True, span_range=0.9, grid_height=4, grid_width=4):
         super(SpatialTransf, self).__init__()
 
         self._in_ch = in_channels 
         self.spatial_dims = spatial_dims
-        self.tps = tps
+        self.use_tps = use_tps
 
-        if self.tps == True:
-            self.localization = None
+        if self.use_tps == True:
+            r1 = r2 = span_range # span_range_width and span_range_height
+            image_height, image_width = self.spatial_dims
+
+            assert r1 < 1 and r2 < 1 # if >= 1, atanh will cause error in TPSLocalization with bounded=True
+            target_control_points = torch.Tensor(list(itertools.product(
+                np.arange(-r1, r1 + 0.00001, 2.0  * r1 / (grid_height - 1)),
+                np.arange(-r2, r2 + 0.00001, 2.0  * r2 / (grid_width - 1)),
+            )))
+            Y, X = target_control_points.split(1, dim = 1)
+            target_control_points = torch.cat([X, Y], dim = 1)
+            self.localization = TPSLocalization(self._in_ch, grid_height, grid_width, target_control_points)
+            self.tps = TPSGridGen(image_height, image_width, target_control_points)
         else:
             self.localization = AffineLocalization(in_channels=in_channels, sate_input=sate_input)
 
     def forward(self, x):
-
-        if self.tps == True:
-            pass
+        if self.use_tps == True:
+            source_control_points = self.localization(x)
+            source_coordinate = self.tps(source_control_points)
+            grid = source_coordinate.view(x.size(0), *self.spatial_dims, 2) # required input size for grid_sampler
         else:
             theta = self.localization(x)
             theta = theta.view(-1, 2, 3) # 2D affine transf param
-
-            if self.spatial_dims is not None:
-                grid = F.affine_grid(theta, (x.size(0), self._in_ch, *self.spatial_dims), align_corners=False)
-            else:
-                grid = F.affine_grid(theta, x.size(), align_corners=False)
+            grid = F.affine_grid(theta, (x.size(0), self._in_ch, *self.spatial_dims), align_corners=False)
         
         x = F.grid_sample(x, grid, mode='bilinear', align_corners=False)
         return x     
@@ -120,22 +175,22 @@ class ResidualBlock(nn.Module):
 
 
 class ComposedSpatialTransf (nn.Module):
-    def __init__(self, in_channels, spatial_dims, latent_channels=8):
+    def __init__(self, in_channels, spatial_dims, latent_channels=8, use_tps=True):
         super(ComposedSpatialTransf, self).__init__()
 
-        self.use_tps = False
-
-        # self.spatial_block = nn.Sequential(
-        #     SpatialTransf(in_channels, spatial_dims, sate_input=True, tps=self.use_tps)
-        # )
+        self.use_tps = use_tps
 
         self.spatial_block = nn.Sequential(
-            SpatialTransf(in_channels, spatial_dims, sate_input=True, tps=self.use_tps),
-            ResidualBlock(in_channels, latent_channels),
-            SpatialTransf(latent_channels, spatial_dims, sate_input=False, tps=self.use_tps),
-            ResidualBlock(latent_channels, in_channels),
-            SpatialTransf(in_channels, spatial_dims, sate_input=False, tps=self.use_tps)
+            SpatialTransf(in_channels, spatial_dims, sate_input=True, use_tps=self.use_tps)
         )
+
+        # self.spatial_block = nn.Sequential(
+        #     SpatialTransf(in_channels, spatial_dims, sate_input=True, use_tps=self.use_tps),
+        #     ResidualBlock(in_channels, latent_channels),
+        #     SpatialTransf(latent_channels, spatial_dims, sate_input=False, use_tps=self.use_tps),
+        #     ResidualBlock(latent_channels, in_channels),
+        #     SpatialTransf(in_channels, spatial_dims, sate_input=False, use_tps=self.use_tps)
+        # )
 
     def forward(self, x):
         return self.spatial_block(x)
