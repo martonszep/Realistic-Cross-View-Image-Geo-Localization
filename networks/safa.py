@@ -81,8 +81,8 @@ class SAFA(nn.Module):
 
     def forward(self, street, satellite):
 
-        # if self.spatial_tr is not None:
-        #     satellite = self.spatial_tr(satellite)
+        if self.spatial_tr is not None:
+            satellite = self.spatial_tr(satellite)
 
         if street is None:
             street_extracted = None
@@ -93,14 +93,19 @@ class SAFA(nn.Module):
             B_street, C, _, _ = street_extracted.shape
             street_extracted = street_extracted.view(B_street, C, -1)
 
+            # Spatial aware attention
             w1 = self.sa1(street_extracted)
+
+            # Global feature aggregation
             street_extracted = torch.matmul(street_extracted, w1).view(B_street, -1)
+
+            # Feature reduction
             street_extracted = F.normalize(street_extracted, p=2, dim=1)
 
         if satellite is None:
             sat_extracted = None
         else:
-
+            # Local feature extraction
             sat_extracted = self.extract2(satellite)
 
             B_sat, C, _, _ = sat_extracted.shape

@@ -66,10 +66,7 @@ if __name__ == '__main__':
         for i, data in enumerate(train_loader):  # inner loop within one epoch
             if i == 0:
                 start_time_batches = time.time()
-            # print(data["satellite"].shape, data["street"].shape)
-            writer.add_images(f"CVUSA/inputs", convert_image_np(data["street"].cpu()), dataformats='NHWC')
-            writer.close()
-            raise Exception ("interrupt execution for debugging")
+
             rgan_wrapper.set_input(data)
             rgan_wrapper.optimize_parameters(epoch)
 
@@ -150,14 +147,14 @@ if __name__ == '__main__':
             log_print('>>Save best model: epoch={} best_acc(tp1_p2s):{:.2f}'.format(epoch + 1, tp1_p2s_acc))
 
         # Program statistics
-        rss, vms = get_sys_mem()
+        rss, vms, cpu_mem_percent_os, cpu_av_mem_os, cpu_mem_percent, cpu_available_mem_percent = get_sys_mem()
         log_print('Memory usage: rss={:.2f}GB vms={:.2f}GB Time:{:.2f}s\n'.format(rss, vms, time.time() - start_time))
 
-    # Visualize the STN transformation on some input batch
-    if opt.polar is False:
-        with torch.no_grad():
-            images = next(iter(val_loader))['satellite'][:16].to(rgan_wrapper.device)
-            transformed_images = rgan_wrapper.retrieval.module.spatial_tr(images)
-            writer.add_images(f"Spatial Transformer/Inputs", convert_image_np(images.cpu()), dataformats='NHWC')
-            writer.add_images(f"Spatial Transformer/Outputs", convert_image_np(transformed_images.cpu()), dataformats='NHWC')
-            writer.close()
+        # Visualize the STN transformation on some input batch
+        if opt.polar is False and (epoch+1) % 5 == 0:
+            with torch.no_grad():
+                images = next(iter(val_loader))['satellite'][:8].to(rgan_wrapper.device)
+                transformed_images = rgan_wrapper.retrieval.module.spatial_tr(images)
+                writer.add_images(f"Spatial Transformer/Inputs", convert_image_np(images.cpu()), dataformats='NHWC')
+                writer.add_images(f"Spatial Transformer/Outputs", convert_image_np(transformed_images.cpu()), global_step=epoch,  dataformats='NHWC')
+    writer.close()
