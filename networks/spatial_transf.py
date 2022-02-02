@@ -53,7 +53,8 @@ class TPSLocalization(nn.Module):
         self.bounded = bounded
 
         # Fully connected input size for images of size (256, 256) or (112, 616)
-        fc_size = 13*13 if sate_input==True else 4*36
+        fc_size = 13*13 if sate_input==True else 4*36 #CVUSA
+        # fc_size = 7*7 #VIGOR
 
         # Thin plate spline spatial transformer localization-network
         self.localization = nn.Sequential(
@@ -76,9 +77,9 @@ class TPSLocalization(nn.Module):
             
             # Lambda(lambda x: print(x.size())),
             Lambda(lambda x: x.view(-1, 10 * fc_size)),
-            nn.Linear(10 * fc_size, 64),
+            nn.Linear(10 * fc_size, 512),
             nn.ReLU(True),
-            nn.Linear(64, grid_height * grid_width * 2)
+            nn.Linear(512, grid_height * grid_width * 2)
         )
 
         # Initialize the weights/bias
@@ -93,7 +94,7 @@ class TPSLocalization(nn.Module):
 
 # Extension of https://pytorch.org/tutorials/intermediate/spatial_transformer_tutorial.html
 class SpatialTransf (nn.Module):
-    def __init__(self, in_channels, spatial_dims, sate_input=True, use_tps=True, span_range=0.9, grid_height=4, grid_width=4):
+    def __init__(self, in_channels, spatial_dims, sate_input=True, use_tps=True, span_range=0.9, grid_height=5, grid_width=5):
         super(SpatialTransf, self).__init__()
 
         self._in_ch = in_channels 
