@@ -22,7 +22,6 @@ class SA(nn.Module):
     def forward(self, x):
         mask, _ = x.max(1)
         
-        # why are they different?
         mask = torch.einsum('bi, ijd -> bjd', mask, self.w1) + self.b1 
         mask = torch.einsum('bjd, jid -> bid', mask, self.w2) + self.b2
         return mask
