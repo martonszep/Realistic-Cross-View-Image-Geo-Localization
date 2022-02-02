@@ -112,3 +112,38 @@ def prepare_street_view_CVACT(input_dir, output_dir):
       image = signal[start: start + int(832 / 2), :, :]
       image = cv2.resize(image, (616, 112), interpolation=cv2.INTER_AREA)
       imageio.imsave(output_dir + img, image)
+
+
+############################ Apply Polar Transform to sat Images in VIGOR Dataset ############################
+def polar_transform_VIGOR(input_dir, output_dir):
+
+  S = 640
+  height = 320
+  width = 640
+
+  i = np.arange(0, height)
+  j = np.arange(0, width)
+  jj, ii = np.meshgrid(j, i)
+
+  y = S / 2. - S / 2. / height * (height - 1 - ii) * np.sin(2 * np.pi * jj / width)
+  x = S / 2. + S / 2. / height * (height - 1 - ii) * np.cos(2 * np.pi * jj / width)
+
+  # input_dir = 'VIGOR/Chicago/satellite/'
+  # output_dir = 'VIGOR/Chicago/polar/'
+
+  if not os.path.exists(output_dir):
+      os.makedirs(output_dir)
+  images = os.listdir(input_dir)
+  
+
+  for i, img in enumerate(images):
+    if i // 1000:
+        print('**********image=', i)
+    signal = imageio.imread(input_dir + img)
+    image = sample_bilinear(signal, x, y)
+    # img_uint = image.astype(np.uint8)
+    imageio.imsave(output_dir + img,  image)
+
+
+if __name__ == '__main__':
+    polar_transform_VIGOR('VIGOR/Chicago/satellite/', 'VIGOR/Chicago/polar/')

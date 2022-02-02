@@ -165,19 +165,21 @@ class RGANWrapper(BaseModel):
 
 
 #****************** this need not be necessarily here, we don't use anything from self
-    def validate_top_VIGOR(self, grd_descriptor, sat_descriptor, dataloader):
-        grd_descriptor = grd_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
-        sat_descriptor = sat_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
+    def validate_top_VIGOR(self, dist_array, dataloader):
+        # grd_descriptor = grd_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
+        # sat_descriptor = sat_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
         accuracy = 0.0
         accuracy_top1 = 0.0
         accuracy_top5 = 0.0
+        accuracy_top10 = 0.0
         accuracy_hit = 0.0
 
         data_amount = 0.0
-        dist_array = 2 - 2 * np.matmul(grd_descriptor, np.transpose(sat_descriptor))
+        # dist_array = 2 - 2 * np.matmul(grd_descriptor, np.transpose(sat_descriptor))
         top1_percent = int(dist_array.shape[1] * 0.01) + 1
         top1 = 1
         top5 = 5
+        top10 = 10
 
         for i in range(dist_array.shape[0]):
 
@@ -193,11 +195,14 @@ class RGANWrapper(BaseModel):
                 accuracy_top1 += 1.0
             if prediction < top5:
                 accuracy_top5 += 1.0
+            if prediction < top10:
+                accuracy_top10 += 1.0
             if prediction_hit < top1:
                 accuracy_hit += 1.0
             data_amount += 1.0
         accuracy /= data_amount
         accuracy_top1 /= data_amount
         accuracy_top5 /= data_amount
+        accuracy_top10 /= data_amount
         accuracy_hit /= data_amount
-        return accuracy, accuracy_top1, accuracy_top5, accuracy_hit
+        return accuracy, accuracy_top1, accuracy_top5, accuracy_top10, accuracy_hit

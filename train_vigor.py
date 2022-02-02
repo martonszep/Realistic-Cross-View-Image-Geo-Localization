@@ -95,8 +95,13 @@ if __name__ == '__main__':
                     composed_data["satellite"] = torch.cat((composed_data["satellite"],  transformed_data["satellite"].unsqueeze(0)), 0)
                     composed_data["street"] = torch.cat((composed_data["street"],  transformed_data["street"].unsqueeze(0)), 0)
             
-            if batch_sat is None or iter == break_iter or iter == 1: # premature break for debugging
+            if batch_grd is None or iter == break_iter: # should we test for batch_grd or batch_sat???
+                try:
+                    print("batch_grd=", batch_grd.shape)
+                except:
+                    print("batch_grd=", batch_grd)
                 print("breaking training loop iter=", iter)
+
                 break
 
             # print(composed_data["satellite"].shape, composed_data["street"].shape)
@@ -250,36 +255,37 @@ if __name__ == '__main__':
 
                 val_i += 1
 
-        # rss, vms, cpu_mem_percent_os, cpu_av_mem_os, cpu_mem_percent, cpu_available_mem_percent = get_sys_mem()
-        # log_print(".........Before matmul...........")
-        # log_print('Memory usage: rss={:.2f}GB vms={:.2f}GB Time:{:.2f}s\n'.format(rss, vms, time.time() - start_time))
-        # log_print('os mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent_os, cpu_av_mem_os))
-        # log_print('psutil mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent, cpu_available_mem_percent))
+        rss, vms, cpu_mem_percent_os, cpu_av_mem_os, cpu_mem_percent, cpu_available_mem_percent = get_sys_mem()
+        log_print(".........Before matmul...........")
+        log_print('Memory usage: rss={:.2f}GB vms={:.2f}GB Time:{:.2f}s\n'.format(rss, vms, time.time() - start_time))
+        log_print('os mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent_os, cpu_av_mem_os))
+        log_print('psutil mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent, cpu_available_mem_percent))
         
-        fake_street_vec = torch.cat(fake_street_batches_v, dim=0)
-        street_vec = torch.cat(street_batches_v, dim=0)
-        # street_vec_permuted = street_vec.permute(1, 0)  #****do we want permute here??? unnecessary in vigor dataloader already works in random order
-        # dists = 2 - 2 * torch.matmul(fake_street_vec, street_vec_permuted) # just to check memory usage
+        # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
+        fake_street_vec = torch.cat(fake_street_batches_v, dim=0).numpy() #.astype(np.float16)
+        street_vec = torch.cat(street_batches_v, dim=0).numpy() #.astype(np.float16)
+        # street_vec_permuted = street_vec.permute(1, 0) # we are in numpy now, we can just use transpose instead of permute
+        dist_array = 2 - 2 * np.matmul(street_vec, np.transpose(fake_street_vec)) # just to check memory usage
         
 
-        # rss, vms, cpu_mem_percent_os, cpu_av_mem_os, cpu_mem_percent, cpu_available_mem_percent = get_sys_mem()
-        # log_print(".........After matmul...........")
-        # log_print('Memory usage: rss={:.2f}GB vms={:.2f}GB Time:{:.2f}s\n'.format(rss, vms, time.time() - start_time))
-        # log_print('os mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent_os, cpu_av_mem_os))
-        # log_print('psutil mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent, cpu_available_mem_percent))
+        rss, vms, cpu_mem_percent_os, cpu_av_mem_os, cpu_mem_percent, cpu_available_mem_percent = get_sys_mem()
+        log_print(".........After matmul...........")
+        log_print('Memory usage: rss={:.2f}GB vms={:.2f}GB Time:{:.2f}s\n'.format(rss, vms, time.time() - start_time))
+        log_print('os mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent_os, cpu_av_mem_os))
+        log_print('psutil mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent, cpu_available_mem_percent))
 
         # tp1 = rgan_wrapper.mutual_topk_acc(dists, topk=1)
         # tp5 = rgan_wrapper.mutual_topk_acc(dists, topk=5)
         # tp10 = rgan_wrapper.mutual_topk_acc(dists, topk=10)
         print(street_vec.shape, fake_street_vec.shape)
 
-        val_accuracy, val_accuracy_top1, val_accuracy_top5, hit_rate = rgan_wrapper.validate_top_VIGOR(street_vec, fake_street_vec, dataloader)
+        val_accuracy, val_accuracy_top1, val_accuracy_top5, val_accuracy_top10, hit_rate = rgan_wrapper.validate_top_VIGOR(dist_array, dataloader)
         
         street_batches_v.clear()
         fake_street_batches_v.clear()
 
-        print('Evaluation epoch %d: accuracy = %.1f%% , top1: %.1f%%, top5: %.1f%%, hit_rate: %.1f%%' % (
-            epoch, val_accuracy * 100.0, val_accuracy_top1 * 100.0, val_accuracy_top5 * 100.0, hit_rate * 100.0))
+        log_print('Evaluation epoch %d: accuracy = %.1f%% , top1: %.1f%%, top5: %.1f%%, top10: %.1f%%, hit_rate: %.1f%%' % (
+            epoch, val_accuracy * 100.0, val_accuracy_top1 * 100.0, val_accuracy_top5 * 100.0, val_accuracy_top10 * 100.0, hit_rate * 100.0))
 
         # num = len(dists)
         # tp1p = rgan_wrapper.mutual_topk_acc(dists, topk=0.01 * num)
@@ -293,12 +299,12 @@ if __name__ == '__main__':
         # tensorboard eval logging
         # writer.add_scalar('Loss/Val', np.mean(epoch_retrieval_loss_v), epoch)
         writer.add_scalar('Recall/R@1', val_accuracy_top1*100, epoch)
-        writer.add_scalar('Recall/R@5', val_accuracy_top5, epoch)
-        # writer.add_scalar('Recall/R@10', tp10[0], epoch)
-        # writer.add_scalar('Recall/R@1%', tp1p[0], epoch)
+        writer.add_scalar('Recall/R@5', val_accuracy_top5*100, epoch)
+        writer.add_scalar('Recall/R@10', val_accuracy_top10*100, epoch)
+        writer.add_scalar('Recall/R@1%',val_accuracy * 100, epoch)
 
         # Save the best model
-        tp1_p2s_acc = val_accuracy_top1
+        tp1_p2s_acc = val_accuracy_top1*100
         if tp1_p2s_acc > ret_best_acc:
             ret_best_acc = tp1_p2s_acc
             rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc, is_best=True)

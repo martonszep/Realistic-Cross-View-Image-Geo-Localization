@@ -21,8 +21,8 @@ class DataLoader:
         label_root = 'splits'
 
         if same_area:
-            self.train_city_list = ['NewYork'] # 'NewYork', 'Seattle', 'SanFrancisco', 'Chicago'
-            self.test_city_list = ['NewYork'] # 'NewYork', 'Seattle', 'SanFrancisco', 'Chicago'
+            self.train_city_list = ['NewYork', 'Seattle', 'SanFrancisco', 'Chicago'] # 'NewYork', 'Seattle', 'SanFrancisco', 'Chicago'
+            self.test_city_list = ['NewYork', 'Seattle', 'SanFrancisco', 'Chicago'] # 'NewYork', 'Seattle', 'SanFrancisco', 'Chicago'
         else:
             self.train_city_list = ['NewYork', 'Seattle']
             self.test_city_list = ['SanFrancisco', 'Chicago']

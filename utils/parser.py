@@ -31,11 +31,12 @@ class Parser():
         parser.add_argument('--vigor_root', type=str, default= './data/VIGOR')
         parser.add_argument('--vigor_dim', type=str, default=4096) # ???
 
-        parser.add_argument('--rgan_checkpoint', type=str, default=None) # default=None
+        # rgan_last_ckpt.pth
+        parser.add_argument('--rgan_checkpoint', type=str, default="output/half_size_four_city_vigor_no_polar_lrr0.0001_batch32_20220201-075121/rgan_last_ckpt.pth") # default=None
 
         #train parameters
-        parser.add_argument("--n_epochs", type=int, default=5, help="number of epochs of combined training")
-        parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
+        parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of combined training")
+        parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
         #parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
         #parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_r", type=float, default=0.0001, help="adam: learning rate")
@@ -62,7 +63,9 @@ class Parser():
         parser.add_argument("--realout_c", type=int, default=3)
         parser.add_argument("--n_layers", type=int, default=3)
         parser.add_argument("--feature_c", type=int, default=64)
-        parser.add_argument('--g_model', type=str, default='vigor')
+        # batch_size=32 -> half_size_four_city_vigor
+        # batch_size=16 -> four_city_vigor_half_size
+        parser.add_argument('--g_model', type=str, default='half_size_four_city_vigor')
         parser.add_argument('--d_model', type=str, default='no_polar')
         parser.add_argument('--r_model', type=str, default='SAFA')
         parser.add_argument('--gan_loss', type=str, default='vanilla')
