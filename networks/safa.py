@@ -82,28 +82,38 @@ class SAFA(nn.Module):
 
     def forward(self, street, satellite):
 
-        if self.spatial_tr is not None:
-            satellite = self.spatial_tr(satellite)
+        # if self.spatial_tr is not None:
+        #     satellite = self.spatial_tr(satellite)
 
-        # Local feature extraction
-        street_extracted = self.extract1(street)
-        sat_extracted = self.extract2(satellite)
-        # print("test",street_extracted.shape, sat_extracted.shape)
+        if street is None:
+            street_extracted = None
+        else:
+            # Local feature extraction
+            street_extracted = self.extract1(street)
 
-        B, C, _, _ = sat_extracted.shape
-        street_extracted = street_extracted.view(B, C, -1)
-        sat_extracted = sat_extracted.view(B, C, -1)
+            B_street, C, _, _ = street_extracted.shape
+            street_extracted = street_extracted.view(B_street, C, -1)
 
-        # Spatial aware attention
-        w1 = self.sa1(street_extracted)
-        w2 = self.sa2(sat_extracted)
+            w1 = self.sa1(street_extracted)
+            street_extracted = torch.matmul(street_extracted, w1).view(B_street, -1)
+            street_extracted = F.normalize(street_extracted, p=2, dim=1)
 
-        # Global feature aggregation
-        street_extracted = torch.matmul(street_extracted, w1).view(B, -1)
-        sat_extracted = torch.matmul(sat_extracted, w2).view(B, -1)
+        if satellite is None:
+            sat_extracted = None
+        else:
 
-        # Feature reduction
-        street_extracted = F.normalize(street_extracted, p=2, dim=1)
-        sat_extracted = F.normalize(sat_extracted, p=2, dim=1)
+            sat_extracted = self.extract2(satellite)
+
+            B_sat, C, _, _ = sat_extracted.shape
+            sat_extracted = sat_extracted.view(B_sat, C, -1)
+
+            # Spatial aware attention
+            w2 = self.sa2(sat_extracted)
+
+            # Global feature aggregation
+            sat_extracted = torch.matmul(sat_extracted, w2).view(B_sat, -1)
+
+            # Feature reduction
+            sat_extracted = F.normalize(sat_extracted, p=2, dim=1)
 
         return sat_extracted, street_extracted

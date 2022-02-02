@@ -26,11 +26,17 @@ class Parser():
         parser.add_argument('--polar', default=True, action='store_true', help='True -> polar transf; False -> spatial transf')
         # parser.add_argument('--save_step', type=int, default=10)
 
-        parser.add_argument('--rgan_checkpoint', type=str, default=None)
+        #vigor parameters 
+        parser.add_argument('--vigor_mode', type=str, default= 'train_SAFA_CVM-loss-same') # dataloader will use substrings of it
+        parser.add_argument('--vigor_root', type=str, default= './data/VIGOR')
+        parser.add_argument('--vigor_dim', type=str, default=4096) # ???
+
+        # rgan_last_ckpt.pth
+        parser.add_argument('--rgan_checkpoint', type=str, default="output/half_size_four_city_vigor_no_polar_lrr0.0001_batch32_20220201-075121/rgan_last_ckpt.pth") # default=None
 
         #train parameters
         parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of combined training")
-        parser.add_argument("--batch_size", type=int, default=52, help="size of the batches")
+        parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
         #parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
         #parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_r", type=float, default=0.0001, help="adam: learning rate")

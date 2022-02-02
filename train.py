@@ -66,7 +66,10 @@ if __name__ == '__main__':
         for i, data in enumerate(train_loader):  # inner loop within one epoch
             if i == 0:
                 start_time_batches = time.time()
-
+            # print(data["satellite"].shape, data["street"].shape)
+            writer.add_images(f"CVUSA/inputs", convert_image_np(data["street"].cpu()), dataformats='NHWC')
+            writer.close()
+            raise Exception ("interrupt execution for debugging")
             rgan_wrapper.set_input(data)
             rgan_wrapper.optimize_parameters(epoch)
 

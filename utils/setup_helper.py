@@ -3,6 +3,7 @@ import random
 import numpy as np
 from collections import OrderedDict
 import psutil
+import os
 
 # Check array/tensor size
 mem_size_of = lambda a: a.element_size() * a.nelement()
@@ -12,7 +13,17 @@ gb = lambda bs: bs / 2. ** 30
 def get_sys_mem():
     p = psutil.Process()
     pmem = p.memory_info()
-    return gb(pmem.rss), gb(pmem.vms)
+
+    # only for linux!
+    total_memory, used_memory, free_memory = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+    cpu_mem_percent_os = round((used_memory/total_memory) * 100, 2)
+    cpu_av_mem_os = round((free_memory/total_memory) * 100, 2)
+
+    # not os specific
+    cpu_mem_percent = round(psutil.virtual_memory().percent, 2)
+    cpu_available_mem_percent = round(psutil.virtual_memory().available * 100 / psutil.virtual_memory().total, 2)
+
+    return gb(pmem.rss), gb(pmem.vms), cpu_mem_percent_os, cpu_av_mem_os, cpu_mem_percent, cpu_available_mem_percent
 
 
 def load_weights(weights_dir, device, key='state_dict'):
