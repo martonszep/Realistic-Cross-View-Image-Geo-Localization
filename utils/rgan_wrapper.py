@@ -66,7 +66,8 @@ class RGANWrapper(BaseModel):
             self.r_loss = self.soft_margin_triplet_loss(self.fake_street_out, self.street_out, loss_weight=self.opt.lambda_sm, hard_topk_ratio=self.opt.hard_decay3_topk_ratio)
         
         if (self.fake_street is not None):
-            self.total_loss = self.r_loss * self.opt.lambda_ret1 + self.criterion_l1(self.fake_street, self.polar) * self.opt.lambda_l1
+            self.l1_loss = self.criterion_l1(self.fake_street, self.polar)
+            self.total_loss = self.r_loss * self.opt.lambda_ret1 +  self.l1_loss * self.opt.lambda_l1
         else:
             self.total_loss = self.r_loss
         self.total_loss.backward()

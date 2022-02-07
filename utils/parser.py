@@ -46,8 +46,8 @@ class Parser():
 
         #loss parameters
         parser.add_argument("--lambda_gp", type=int, default=10, help="loss weight for gradient penalty")
-        parser.add_argument("--lambda_l1", type=int, default=100, help="loss weight for l1")
-        parser.add_argument("--lambda_ret1", type=int, default=1000, help="loss weight for retrieval")
+        parser.add_argument("--lambda_l1", type=int, default=1, help="loss weight for l1")
+        parser.add_argument("--lambda_ret1", type=int, default=1, help="loss weight for retrieval")
         parser.add_argument("--lambda_sm", type=int, default=10, help="loss weight for soft margin")
         parser.add_argument("--hard_topk_ratio", type=float, default=1.0, help="hard negative ratio")
         parser.add_argument("--hard_decay1_topk_ratio", type=float, default=0.1, help="hard negative ratio")

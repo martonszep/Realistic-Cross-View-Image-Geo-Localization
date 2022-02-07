@@ -54,9 +54,11 @@ if __name__ == '__main__':
         street_batches_t = []
         fake_street_batches_t = []
         epoch_retrieval_loss_t = []
+        epoch_l1_loss_t = []
         street_batches_v = []
         fake_street_batches_v = []
         epoch_retrieval_loss_v= []
+        epoch_l1_loss_v = []
         # epoch_generator_loss = []
         # epoch_discriminator_loss = []
         log_print('>>> RGAN Epoch {}'.format(epoch))
@@ -73,6 +75,7 @@ if __name__ == '__main__':
             fake_street_batches_t.append(rgan_wrapper.fake_street_out.cpu().data)
             street_batches_t.append(rgan_wrapper.street_out.cpu().data)
             epoch_retrieval_loss_t.append(rgan_wrapper.r_loss.item())
+            epoch_l1_loss_t.append(rgan_wrapper.l1_loss.item()) if opt.polar is False else None
             # epoch_discriminator_loss.append(rgan_wrapper.d_loss.item())
             # epoch_generator_loss.append(rgan_wrapper.g_loss.item())
 
@@ -91,6 +94,7 @@ if __name__ == '__main__':
                 fake_street_batches_t.clear()
         
         writer.add_scalar('Loss/Train', np.mean(epoch_retrieval_loss_t), epoch) # tensorboard logging
+        writer.add_scalar('Loss/L1_train', np.mean(epoch_l1_loss_t), epoch)
 
         rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc,
                                         last_ckpt=True)  # Always save last ckpt
@@ -113,6 +117,7 @@ if __name__ == '__main__':
                 fake_street_batches_v.append(rgan_wrapper.fake_street_out_val.cpu().data)
                 street_batches_v.append(rgan_wrapper.street_out_val.cpu().data)
                 epoch_retrieval_loss_v.append(rgan_wrapper.r_loss.item())
+                epoch_l1_loss_v.append(rgan_wrapper.l1_loss.item()) if opt.polar is False else None
         
         fake_street_vec = torch.cat(fake_street_batches_v, dim=0)
         street_vec = torch.cat(street_batches_v, dim=0)
@@ -134,6 +139,7 @@ if __name__ == '__main__':
         
         # tensorboard eval logging
         writer.add_scalar('Loss/Val', np.mean(epoch_retrieval_loss_v), epoch)
+        writer.add_scalar('Loss/L1_val', np.mean(epoch_l1_loss_v), epoch)
         writer.add_scalar('Recall/R@1', tp1[0], epoch)
         writer.add_scalar('Recall/R@5', tp5[0], epoch)
         writer.add_scalar('Recall/R@10', tp10[0], epoch)

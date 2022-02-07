@@ -81,7 +81,7 @@ class CVUSA(torch.utils.data.Dataset):
         sample = {'satellite': sate_im, 'street': pano_im, 'polar': polar_im}
         if self.transform_op:
             sample = self.transform_op(sample)
-        sample['im_path'] = (sate_path, pano_path)
+        sample['im_path'] = (sate_path, pano_path, polar_path)
         sample['item_id'] = self.item_ids[pos_id]
         return sample
 
