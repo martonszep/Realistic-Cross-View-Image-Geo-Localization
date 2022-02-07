@@ -23,7 +23,7 @@ class Parser():
         parser.add_argument('--data_root', type=str, default= './data/CVUSA')
         parser.add_argument('--train_csv', type=str, default='train-19zl.csv')
         parser.add_argument('--val_csv', type=str, default='val-19zl.csv')
-        parser.add_argument('--polar', default=True, action='store_true', help='True -> polar transf; False -> spatial transf')
+        parser.add_argument('--polar', default=False, action='store_true', help='True -> polar transf; False -> spatial transf')
         # parser.add_argument('--save_step', type=int, default=10)
 
         #vigor parameters 
@@ -32,7 +32,7 @@ class Parser():
         parser.add_argument('--vigor_dim', type=str, default=4096) # ???
 
         # rgan_last_ckpt.pth
-        parser.add_argument('--rgan_checkpoint', type=str, default="output/half_size_four_city_vigor_no_polar_lrr0.0001_batch32_20220201-075121/rgan_last_ckpt.pth") # default=None
+        parser.add_argument('--rgan_checkpoint', type=str, default=None) # default=None
 
         #train parameters
         parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of combined training")
@@ -64,7 +64,7 @@ class Parser():
         parser.add_argument("--n_layers", type=int, default=3)
         parser.add_argument("--feature_c", type=int, default=64)
         parser.add_argument('--g_model', type=str, default='separate')
-        parser.add_argument('--d_model', type=str, default='polar')
+        parser.add_argument('--d_model', type=str, default='tps')
         parser.add_argument('--r_model', type=str, default='SAFA')
         parser.add_argument('--gan_loss', type=str, default='vanilla')
 

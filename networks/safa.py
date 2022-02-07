@@ -70,6 +70,7 @@ class SAFA(nn.Module):
 
         # self.spatial_tr = spatial_transf.ComposedSpatialTransf(in_channels=3, spatial_dims=None) if use_spatialtr else None
         self.spatial_tr = spatial_transf.ComposedSpatialTransf(in_channels=3, spatial_dims=(H2, W2)) if use_spatialtr else None
+        self.transformed_satellite = None
 
         self.extract1 = backbones.ResNet34()
         self.extract2 = backbones.ResNet34()
@@ -82,7 +83,8 @@ class SAFA(nn.Module):
     def forward(self, street, satellite):
 
         if self.spatial_tr is not None:
-            satellite = self.spatial_tr(satellite)
+            self.transformed_satellite = self.spatial_tr(satellite)
+            satellite = self.transformed_satellite
 
         if street is None:
             street_extracted = None

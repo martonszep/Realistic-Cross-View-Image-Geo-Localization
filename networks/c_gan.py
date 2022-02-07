@@ -42,11 +42,11 @@ def define_R(ret_method, polar, gpu_ids=[]):
     if 'SAFA' == ret_method:
         sa_num = 8
         # VIGOR
-        sate_size = (160, 160) # 320, 320
-        pano_size = (160, 320) # 320, 640
+        # sate_size = (160, 160) # 320, 320
+        # pano_size = (160, 320) # 320, 640
         # CVUSA
-        # sate_size = (112, 616) if polar else (256, 256) # this determines the output size of the spatial transformer if polar False
-        # pano_size = (112, 616)
+        sate_size = (112, 616) #if polar else (256, 256) # this determines the output size of the spatial transformer if polar False
+        pano_size = (112, 616)
         net = safa.SAFA(sa_num=sa_num, H1=pano_size[0], W1=pano_size[1], H2=sate_size[0], W2=sate_size[1], use_spatialtr=not polar)
     else:
         raise NotImplementedError('Retrieval model name [%s] is not recognized' % ret_method)

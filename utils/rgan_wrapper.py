@@ -17,7 +17,7 @@ class RGANWrapper(BaseModel):
         # self.discriminator = net_D
 
         # self.criterion = GANLoss(opt.gan_loss).to(opt.device)
-        # self.criterion_l1 = torch.nn.L1Loss()
+        self.criterion_l1 = torch.nn.L1Loss()
 
         # Optimizers
         # self.optimizer_D = torch.optim.Adam(self.discriminator.parameters(), lr=opt.lr_d, betas=(opt.b1, opt.b2))
@@ -52,6 +52,7 @@ class RGANWrapper(BaseModel):
     def backward_R(self, epoch):
 
         self.fake_street_out, self.street_out = self.retrieval(self.street, self.satellite)
+        self.fake_street = self.retrieval.module.transformed_satellite if (self.retrieval.module.spatial_tr is not None) else None
         # self.r_loss = self.soft_margin_triplet_loss(self.fake_street_out, self.street_out, loss_weight=self.opt.lambda_sm, hard_topk_ratio=self.opt.hard_topk_ratio)
 
         # Scheduled hard negative mining
@@ -63,7 +64,12 @@ class RGANWrapper(BaseModel):
             self.r_loss = self.soft_margin_triplet_loss(self.fake_street_out, self.street_out, loss_weight=self.opt.lambda_sm, hard_topk_ratio=self.opt.hard_decay2_topk_ratio)
         elif epoch > 60:
             self.r_loss = self.soft_margin_triplet_loss(self.fake_street_out, self.street_out, loss_weight=self.opt.lambda_sm, hard_topk_ratio=self.opt.hard_decay3_topk_ratio)
-        self.r_loss.backward()
+        
+        if (self.fake_street is not None):
+            self.total_loss = self.r_loss * self.opt.lambda_ret1 + self.criterion_l1(self.fake_street, self.polar) * self.opt.lambda_l1
+        else:
+            self.total_loss = self.r_loss
+        self.total_loss.backward()
 
 
     def backward_G(self, epoch):
