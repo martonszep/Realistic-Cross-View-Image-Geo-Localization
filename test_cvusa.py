@@ -20,13 +20,6 @@ if __name__ == '__main__':
     log_print = lambda ms: parse.log(ms, log)
 
     #define networks
-    # generator = define_G(netG=opt.g_model, gpu_ids=opt.gpu_ids)
-    # print('Init {} as generator model'.format(opt.g_model))
-
-    # discriminator = define_D(input_c=opt.input_c, output_c=opt.realout_c, ndf=opt.feature_c, netD=opt.d_model,
-    #                             condition=opt.condition, n_layers_D=opt.n_layers, gpu_ids=opt.gpu_ids)
-    # print('Init {} as discriminator model'.format(opt.d_model))
-
     retrieval = define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
     print('Init {} as retrieval model'.format(opt.r_model))
 
