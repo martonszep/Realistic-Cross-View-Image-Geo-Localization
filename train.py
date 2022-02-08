@@ -82,7 +82,7 @@ if __name__ == '__main__':
                 fake_street_batches_t.clear()
         
         writer.add_scalar('Loss/Train', np.mean(epoch_retrieval_loss_t), epoch) # tensorboard logging
-        writer.add_scalar('Loss/L1_train', np.mean(epoch_l1_loss_t), epoch)
+        writer.add_scalar('Loss/L1_train', np.mean(epoch_l1_loss_t), epoch) if opt.polar is False else None
 
         rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc,
                                         last_ckpt=True)  # Always save last ckpt
@@ -119,7 +119,7 @@ if __name__ == '__main__':
         
         # tensorboard eval logging
         writer.add_scalar('Loss/Val', np.mean(epoch_retrieval_loss_v), epoch)
-        writer.add_scalar('Loss/L1_val', np.mean(epoch_l1_loss_v), epoch)
+        writer.add_scalar('Loss/L1_val', np.mean(epoch_l1_loss_v), epoch) if opt.polar is False else None
         writer.add_scalar('Recall/R@1', tp1[0], epoch)
         writer.add_scalar('Recall/R@5', tp5[0], epoch)
         writer.add_scalar('Recall/R@10', tp10[0], epoch)

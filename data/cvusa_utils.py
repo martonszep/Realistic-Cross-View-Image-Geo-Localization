@@ -78,10 +78,15 @@ class CVUSA(torch.utils.data.Dataset):
         sate_im = self.load_im(sate_path, resize=self.sate_size)
         pano_im = self.load_im(pano_path, resize=self.pano_size)
         polar_im= self.load_im(polar_path, resize=self.pano_size) if (polar_path is not None) else None
-        sample = {'satellite': sate_im, 'street': pano_im, 'polar': polar_im}
+
+        if polar_im is not None:
+            sample = {'satellite': sate_im, 'street': pano_im, 'polar': polar_im}
+        else:
+            sample = {'satellite': sate_im, 'street': pano_im}
+
         if self.transform_op:
             sample = self.transform_op(sample)
-        sample['im_path'] = (sate_path, pano_path, polar_path)
+        sample['im_path'] = (sate_path, pano_path)
         sample['item_id'] = self.item_ids[pos_id]
         return sample
 
