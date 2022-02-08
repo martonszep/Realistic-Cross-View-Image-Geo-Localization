@@ -185,6 +185,7 @@ class ComposedSpatialTransf (nn.Module):
             SpatialTransf(in_channels, spatial_dims, sate_input=True, use_tps=self.use_tps)
         )
 
+        # possibility to stack multiple spatial transformers with residual blocks in between
         # self.spatial_block = nn.Sequential(
         #     SpatialTransf(in_channels, spatial_dims, sate_input=True, use_tps=self.use_tps),
         #     ResidualBlock(in_channels, latent_channels),

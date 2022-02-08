@@ -37,16 +37,6 @@ class BaseModel(ABC):
         else:
             self.polar = None
 
-    def set_input_cvact(self, data, utm):
-        sate_ims = data['satellite']
-        pano_ims = data['street']
-        self.satellite = sate_ims.to(self.device)
-        self.street = pano_ims.to(self.device)
-        self.in_batch_dis = torch.zeros(utm.shape[0], utm.shape[0]).to(self.device)
-        for k in range(utm.shape[0]):
-            for j in range(utm.shape[0]):
-                self.in_batch_dis[k, j] = (utm[k,0] - utm[j,0])*(utm[k,0] - utm[j,0]) + (utm[k, 1] - utm[j, 1])*(utm[k, 1] - utm[j, 1])
-
 
     def mutual_topk_acc(self, dists, topk=1):
         pos_dists = torch.diag(dists)
@@ -85,39 +75,6 @@ class BaseModel(ABC):
             loss_p2s = loss_p2s.view(-1)
             loss_p2s, p2s_ids = torch.topk(loss_p2s, num_hard_triplets)
         loss_p2s = loss_p2s.sum() / num_hard_triplets
-        # Total loss
-        loss = (loss_s2p + loss_p2s) / 2.0
-        return loss
-
-    def compute_cvact_loss(self, sate_vecs, pano_vecs, utms_x, UTMthres, loss_weight=10, hard_topk_ratio=1.0):
-
-        dists = 2 - 2 * torch.matmul(sate_vecs, pano_vecs.permute(1, 0))  # Pairwise matches within batch
-        pos_dists = torch.diag(dists)
-        N = len(pos_dists)
-        diag_ids = np.arange(N)
-        useful_pairs = torch.ge(utms_x[:,:], UTMthres)
-        useful_pairs = useful_pairs.float()
-        pair_n = useful_pairs.sum()
-        num_hard_triplets = int(hard_topk_ratio * (N * (N - 1))) if int(hard_topk_ratio * (N * (N - 1))) < pair_n else pair_n
-
-        # Match from satellite to street pano
-        triplet_dist_s2p = (pos_dists.unsqueeze(1) - dists) * useful_pairs
-        loss_s2p = torch.log(1 + torch.exp(loss_weight * triplet_dist_s2p))
-        loss_s2p[diag_ids, diag_ids] = 0
-        if num_hard_triplets != pair_n:
-            loss_s2p = loss_s2p.view(-1)
-            loss_s2p, s2p_ids = torch.topk(loss_s2p, num_hard_triplets)
-        loss_s2p = loss_s2p.sum() / num_hard_triplets
-
-        # Match from street pano to satellite
-        triplet_dist_p2s = (pos_dists - dists) * useful_pairs
-        loss_p2s = torch.log(1 + torch.exp(loss_weight * triplet_dist_p2s))
-        loss_p2s[diag_ids, diag_ids] = 0
-        if num_hard_triplets != pair_n:
-            loss_p2s = loss_p2s.view(-1)
-            loss_p2s, p2s_ids = torch.topk(loss_p2s, num_hard_triplets)
-        loss_p2s = loss_p2s.sum() / num_hard_triplets
-
         # Total loss
         loss = (loss_s2p + loss_p2s) / 2.0
         return loss

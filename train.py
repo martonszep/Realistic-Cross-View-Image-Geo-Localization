@@ -19,13 +19,6 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=log_file.replace('log.txt', '')) # tensorboard logger
 
     #define networks
-    # generator = define_G(netG=opt.g_model, gpu_ids=opt.gpu_ids)
-    # log_print('Init {} as generator model'.format(opt.g_model))
-
-    # discriminator = define_D(input_c=opt.input_c, output_c=opt.realout_c, ndf=opt.feature_c, netD=opt.d_model,
-    #                             condition=opt.condition, n_layers_D=opt.n_layers, gpu_ids=opt.gpu_ids)
-    # log_print('Init {} as discriminator model'.format(opt.d_model))
-
     retrieval = define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
     log_print('Init {} as retrieval model'.format(opt.r_model))
 
@@ -59,11 +52,8 @@ if __name__ == '__main__':
         fake_street_batches_v = []
         epoch_retrieval_loss_v= []
         epoch_l1_loss_v = []
-        # epoch_generator_loss = []
-        # epoch_discriminator_loss = []
+
         log_print('>>> RGAN Epoch {}'.format(epoch))
-        # rgan_wrapper.generator.train()
-        # rgan_wrapper.discriminator.train()
         rgan_wrapper.retrieval.train()
         for i, data in enumerate(train_loader):  # inner loop within one epoch
             if i == 0:
@@ -76,8 +66,6 @@ if __name__ == '__main__':
             street_batches_t.append(rgan_wrapper.street_out.cpu().data)
             epoch_retrieval_loss_t.append(rgan_wrapper.r_loss.item())
             epoch_l1_loss_t.append(rgan_wrapper.l1_loss.item()) if opt.polar is False else None
-            # epoch_discriminator_loss.append(rgan_wrapper.d_loss.item())
-            # epoch_generator_loss.append(rgan_wrapper.g_loss.item())
 
             if (i + 1) % 40 == 0 or (i + 1) == len(train_loader):
                 fake_street_vec = torch.cat(fake_street_batches_t, dim=0)
@@ -99,16 +87,7 @@ if __name__ == '__main__':
         rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc,
                                         last_ckpt=True)  # Always save last ckpt
 
-        # Save model periodically
-        # if (epoch + 1) % opt.save_step == 0:
-        #     rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc)
-
-        # Free up cached GPU memory used by PyTorch. This might result in an "unhealthy" computation graph.
-        # torch.cuda.empty_cache() 
-        # print(torch.cuda.memory_allocated())
-        # print(torch.cuda.memory_reserved())
-
-        # rgan_wrapper.generator.eval()
+        # validation loop
         rgan_wrapper.retrieval.eval()
         with torch.no_grad():
             for i, data in enumerate(val_loader):
@@ -119,6 +98,7 @@ if __name__ == '__main__':
                 epoch_retrieval_loss_v.append(rgan_wrapper.r_loss.item())
                 epoch_l1_loss_v.append(rgan_wrapper.l1_loss.item()) if opt.polar is False else None
         
+        # validation metric calculation
         fake_street_vec = torch.cat(fake_street_batches_v, dim=0)
         street_vec = torch.cat(street_batches_v, dim=0)
         dists = 2 - 2 * torch.matmul(fake_street_vec, street_vec.permute(1, 0))
