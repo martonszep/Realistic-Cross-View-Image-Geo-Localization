@@ -1,6 +1,5 @@
 from data.custom_transforms import *
 from data.cvusa_utils import CVUSA
-from networks.c_gan import *
 from utils import model_wrapper, parser
 from utils.setup_helper import *
 from argparse import Namespace
@@ -20,7 +19,7 @@ if __name__ == '__main__':
     log_print = lambda ms: parse.log(ms, log)
 
     #define networks
-    retrieval = define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
+    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
     print('Init {} as retrieval model'.format(opt.r_model))
 
     # Initialize network wrapper

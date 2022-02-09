@@ -1,7 +1,6 @@
 from data.custom_transforms import *
 from data.cvusa_utils import CVUSA, convert_image_np, convert_image_np_VIGOR
 from data.vigor_dataloader import DataLoader
-from networks.c_gan import *
 from torch.utils.tensorboard import SummaryWriter
 from utils import model_wrapper, base_wrapper, parser
 from utils.setup_helper import *
@@ -20,7 +19,7 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=log_file.replace('log.txt', '')) # tensorboard logger
 
     #define networks
-    retrieval = define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
+    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
     log_print('Init {} as retrieval model'.format(opt.r_model))
 
     model_wrapper = model_wrapper.ModelWrapper(opt, log_file, retrieval)
