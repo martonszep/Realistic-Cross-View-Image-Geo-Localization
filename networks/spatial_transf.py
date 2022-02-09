@@ -94,7 +94,7 @@ class TPSLocalization(nn.Module):
 
 # Extension of https://pytorch.org/tutorials/intermediate/spatial_transformer_tutorial.html
 class SpatialTransf (nn.Module):
-    def __init__(self, in_channels, spatial_dims, sate_input=True, use_tps=True, span_range=0.9, grid_height=5, grid_width=5):
+    def __init__(self, in_channels, spatial_dims, sate_input=True, use_tps=True, span_range=0.9, grid_height=6, grid_width=10):
         super(SpatialTransf, self).__init__()
 
         self._in_ch = in_channels 
@@ -185,6 +185,7 @@ class ComposedSpatialTransf (nn.Module):
             SpatialTransf(in_channels, spatial_dims, sate_input=True, use_tps=self.use_tps)
         )
 
+        # possibility to stack multiple spatial transformers with residual blocks in between
         # self.spatial_block = nn.Sequential(
         #     SpatialTransf(in_channels, spatial_dims, sate_input=True, use_tps=self.use_tps),
         #     ResidualBlock(in_channels, latent_channels),

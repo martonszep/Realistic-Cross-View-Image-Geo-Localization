@@ -13,7 +13,7 @@ class Parser():
         parser.add_argument('--name', type=str, default='', help=' ')
         parser.add_argument('--seed', type=int, default=10)
         parser.add_argument('--phase', type=str, default='train', help='')
-        parser.add_argument('--gpu_ids', type=str, default='0,1', help='gpu ids: e.g. 0  0,1')
+        parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1')
 
         parser.add_argument('--isTrain', default=True, action='store_true')
         parser.add_argument('--resume', type=str, default='', help='model to load from `--results_dir`')
@@ -23,53 +23,35 @@ class Parser():
         parser.add_argument('--data_root', type=str, default= './data/CVUSA')
         parser.add_argument('--train_csv', type=str, default='train-19zl.csv')
         parser.add_argument('--val_csv', type=str, default='val-19zl.csv')
-        parser.add_argument('--polar', default=True, action='store_true', help='True -> polar transf; False -> spatial transf')
-        # parser.add_argument('--save_step', type=int, default=10)
 
         #vigor parameters 
         parser.add_argument('--vigor_mode', type=str, default= 'train_SAFA_CVM-loss-same') # dataloader will use substrings of it
         parser.add_argument('--vigor_root', type=str, default= './data/VIGOR')
-        parser.add_argument('--vigor_dim', type=str, default=4096) # ???
+        parser.add_argument('--vigor_dim', type=str, default=4096)
 
-        # rgan_last_ckpt.pth
-        parser.add_argument('--rgan_checkpoint', type=str, default="output/half_size_four_city_vigor_no_polar_lrr0.0001_batch32_20220201-075121/rgan_last_ckpt.pth") # default=None
+        #model parameters
+        parser.add_argument('--r_model', type=str, default='SAFA')
+        parser.add_argument('--model_name', type=str, default='tps')
+        parser.add_argument('--checkpoint', type=str, default=None)
+        parser.add_argument('--polar', default=False, action='store_true', help='True -> polar transf; False -> spatial transf')
+        parser.add_argument('--use_affine', default=False, action='store_true', help='Has effect only if --polar is not specified. \
+            True -> spatial transformer uses affine transformation; False -> spatial transformer uses thin plate spline transformation')
 
         #train parameters
-        parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of combined training")
+        parser.add_argument("--n_epochs", type=int, default=20, help="number of epochs of combined training")
         parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
-        #parser.add_argument("--lr_g", type=float, default=0.0001, help="adam: learning rate")
-        #parser.add_argument("--lr_d", type=float, default=0.0001, help="adam: learning rate")
         parser.add_argument("--lr_r", type=float, default=0.0001, help="adam: learning rate")
-
         parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
         parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 
         #loss parameters
-        parser.add_argument("--lambda_gp", type=int, default=10, help="loss weight for gradient penalty")
-        parser.add_argument("--lambda_l1", type=int, default=100, help="loss weight for l1")
-        parser.add_argument("--lambda_ret1", type=int, default=1000, help="loss weight for retrieval")
+        parser.add_argument("--lambda_l1", type=int, default=1, help="loss weight for l1")
+        parser.add_argument("--lambda_ret1", type=int, default=1, help="loss weight for retrieval")
         parser.add_argument("--lambda_sm", type=int, default=10, help="loss weight for soft margin")
         parser.add_argument("--hard_topk_ratio", type=float, default=1.0, help="hard negative ratio")
         parser.add_argument("--hard_decay1_topk_ratio", type=float, default=0.1, help="hard negative ratio")
         parser.add_argument("--hard_decay2_topk_ratio", type=float, default=0.05, help="hard negative ratio")
         parser.add_argument("--hard_decay3_topk_ratio", type=float, default=0.01, help="hard negative ratio")
-
-        #gan parameters
-        parser.add_argument("--n_critic", type=int, default=1,
-                            help="number of training steps for discriminator per iter")
-
-        parser.add_argument("--input_c", type=int, default=3)
-        parser.add_argument("--segout_c", type=int, default=3)
-        parser.add_argument("--realout_c", type=int, default=3)
-        parser.add_argument("--n_layers", type=int, default=3)
-        parser.add_argument("--feature_c", type=int, default=64)
-        parser.add_argument('--g_model', type=str, default='separate')
-        parser.add_argument('--d_model', type=str, default='polar')
-        parser.add_argument('--r_model', type=str, default='SAFA')
-        parser.add_argument('--gan_loss', type=str, default='vanilla')
-
-        parser.add_argument("--lambda", type=int, default=10)
-        parser.add_argument("--condition", type=int, default=1)
 
         self.initialized = True
         return parser
@@ -103,7 +85,7 @@ class Parser():
 
         # save to the disk
         if opt.resume == '':
-            prefix = '{}_{}_lrr{}_batch{}_{}'.format(opt.g_model, opt.d_model, opt.lr_r, opt.batch_size,
+            prefix = '{}_lrr{}_batch{}_{}'.format(opt.model_name, opt.lr_r, opt.batch_size,
                                                                 time.strftime("%Y%m%d-%H%M%S"))
             out_dir = os.path.join(opt.results_dir, prefix)
             os.makedirs(out_dir)

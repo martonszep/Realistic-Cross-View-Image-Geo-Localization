@@ -1,7 +1,6 @@
 from data.custom_transforms import *
 from data.cvusa_utils import CVUSA
-from networks.c_gan import *
-from utils import rgan_wrapper, parser
+from utils import model_wrapper, parser
 from utils.setup_helper import *
 from argparse import Namespace
 import os
@@ -20,19 +19,12 @@ if __name__ == '__main__':
     log_print = lambda ms: parse.log(ms, log)
 
     #define networks
-    # generator = define_G(netG=opt.g_model, gpu_ids=opt.gpu_ids)
-    # print('Init {} as generator model'.format(opt.g_model))
-
-    # discriminator = define_D(input_c=opt.input_c, output_c=opt.realout_c, ndf=opt.feature_c, netD=opt.d_model,
-    #                             condition=opt.condition, n_layers_D=opt.n_layers, gpu_ids=opt.gpu_ids)
-    # print('Init {} as discriminator model'.format(opt.d_model))
-
-    retrieval = define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
+    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
     print('Init {} as retrieval model'.format(opt.r_model))
 
     # Initialize network wrapper
-    opt.rgan_checkpoint = os.path.join(opt.results_dir, opt.resume, 'rgan_best_ckpt.pth')
-    rgan_wrapper = rgan_wrapper.RGANWrapper(opt, log_file, retrieval)
+    opt.checkpoint = os.path.join(opt.results_dir, opt.resume, 'rgan_best_ckpt.pth')
+    model_wrapper = model_wrapper.ModelWrapper(opt, log_file, retrieval)
     # Configure data loader
     val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, use_polar=opt.polar, name=opt.name,
                         transform_op=ToTensor())
@@ -41,28 +33,27 @@ if __name__ == '__main__':
     log_print('Load test dataset from {}: val_set={}'.format(opt.data_root, len(val_dataset)))
     log_print('length of val loader: {:d}'.format(len(val_loader)))
 
-    # rgan_wrapper.generator.eval()
-    rgan_wrapper.retrieval.eval()
+    model_wrapper.retrieval.eval()
     fake_street_batches_v = []
     street_batches_v = []
     item_ids = []
 
     for i, data in enumerate(val_loader):
-        rgan_wrapper.set_input(data)
-        rgan_wrapper.eval_model()
-        fake_street_batches_v.append(rgan_wrapper.fake_street_out_val.cpu().data)
-        street_batches_v.append(rgan_wrapper.street_out_val.cpu().data)
+        model_wrapper.set_input(data)
+        model_wrapper.eval_model()
+        fake_street_batches_v.append(model_wrapper.fake_street_out_val.cpu().data)
+        street_batches_v.append(model_wrapper.street_out_val.cpu().data)
 
     fake_street_vec = torch.cat(fake_street_batches_v, dim=0)
     street_vec = torch.cat(street_batches_v, dim=0)
     dists = 2 - 2 * torch.matmul(fake_street_vec, street_vec.permute(1, 0))
 
-    tp1 = rgan_wrapper.mutual_topk_acc(dists, topk=1)
-    tp5 = rgan_wrapper.mutual_topk_acc(dists, topk=5)
-    tp10 = rgan_wrapper.mutual_topk_acc(dists, topk=10)
+    tp1 = model_wrapper.mutual_topk_acc(dists, topk=1)
+    tp5 = model_wrapper.mutual_topk_acc(dists, topk=5)
+    tp10 = model_wrapper.mutual_topk_acc(dists, topk=10)
 
     num = len(dists)
-    tp1p = rgan_wrapper.mutual_topk_acc(dists, topk=0.01 * num)
+    tp1p = model_wrapper.mutual_topk_acc(dists, topk=0.01 * num)
     acc = Namespace(num=len(dists), tp1=tp1, tp5=tp5, tp10=tp10, tp1p=tp1p)
 
     log_print('\nEvaluate Samples:{num:d}\nRecall(p2s/s2p) tp1:{tp1[0]:.2f}/{tp1[1]:.2f} ' \

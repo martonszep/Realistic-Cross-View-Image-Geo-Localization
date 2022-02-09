@@ -20,6 +20,8 @@ class BaseModel(ABC):
     def set_input(self, batch):
         sate_ims = batch['satellite']
         pano_ims = batch['street']
+        polar_ims = batch['polar'] if (self.opt.polar is False) else None
+
         if sate_ims is not None:
             self.satellite = sate_ims.to(self.device)
         else:
@@ -30,15 +32,10 @@ class BaseModel(ABC):
         else:
             self.street = None
 
-    def set_input_cvact(self, data, utm):
-        sate_ims = data['satellite']
-        pano_ims = data['street']
-        self.satellite = sate_ims.to(self.device)
-        self.street = pano_ims.to(self.device)
-        self.in_batch_dis = torch.zeros(utm.shape[0], utm.shape[0]).to(self.device)
-        for k in range(utm.shape[0]):
-            for j in range(utm.shape[0]):
-                self.in_batch_dis[k, j] = (utm[k,0] - utm[j,0])*(utm[k,0] - utm[j,0]) + (utm[k, 1] - utm[j, 1])*(utm[k, 1] - utm[j, 1])
+        if polar_ims is not None:
+            self.polar = polar_ims.to(self.device)
+        else:
+            self.polar = None
 
 
     def mutual_topk_acc(self, dists, topk=1):
@@ -82,39 +79,6 @@ class BaseModel(ABC):
         loss = (loss_s2p + loss_p2s) / 2.0
         return loss
 
-    def compute_cvact_loss(self, sate_vecs, pano_vecs, utms_x, UTMthres, loss_weight=10, hard_topk_ratio=1.0):
-
-        dists = 2 - 2 * torch.matmul(sate_vecs, pano_vecs.permute(1, 0))  # Pairwise matches within batch
-        pos_dists = torch.diag(dists)
-        N = len(pos_dists)
-        diag_ids = np.arange(N)
-        useful_pairs = torch.ge(utms_x[:,:], UTMthres)
-        useful_pairs = useful_pairs.float()
-        pair_n = useful_pairs.sum()
-        num_hard_triplets = int(hard_topk_ratio * (N * (N - 1))) if int(hard_topk_ratio * (N * (N - 1))) < pair_n else pair_n
-
-        # Match from satellite to street pano
-        triplet_dist_s2p = (pos_dists.unsqueeze(1) - dists) * useful_pairs
-        loss_s2p = torch.log(1 + torch.exp(loss_weight * triplet_dist_s2p))
-        loss_s2p[diag_ids, diag_ids] = 0
-        if num_hard_triplets != pair_n:
-            loss_s2p = loss_s2p.view(-1)
-            loss_s2p, s2p_ids = torch.topk(loss_s2p, num_hard_triplets)
-        loss_s2p = loss_s2p.sum() / num_hard_triplets
-
-        # Match from street pano to satellite
-        triplet_dist_p2s = (pos_dists - dists) * useful_pairs
-        loss_p2s = torch.log(1 + torch.exp(loss_weight * triplet_dist_p2s))
-        loss_p2s[diag_ids, diag_ids] = 0
-        if num_hard_triplets != pair_n:
-            loss_p2s = loss_p2s.view(-1)
-            loss_p2s, p2s_ids = torch.topk(loss_p2s, num_hard_triplets)
-        loss_p2s = loss_p2s.sum() / num_hard_triplets
-
-        # Total loss
-        loss = (loss_s2p + loss_p2s) / 2.0
-        return loss
-
     def load_weights(self, weights_dir, device, key='state_dict'):
         map_location = lambda storage, loc: storage.cuda(device.index) if torch.cuda.is_available() else storage
         weights_dict = None
@@ -130,3 +94,45 @@ class BaseModel(ABC):
             if net is not None:
                 for param in net.parameters():
                     param.requires_grad = requires_grad
+
+    def validate_top_VIGOR(self, dist_array, dataloader):
+        # grd_descriptor = grd_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
+        # sat_descriptor = sat_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
+        accuracy = 0.0
+        accuracy_top1 = 0.0
+        accuracy_top5 = 0.0
+        accuracy_top10 = 0.0
+        accuracy_hit = 0.0
+
+        data_amount = 0.0
+        # dist_array = 2 - 2 * np.matmul(grd_descriptor, np.transpose(sat_descriptor))
+        top1_percent = int(dist_array.shape[1] * 0.01) + 1
+        top1 = 1
+        top5 = 5
+        top10 = 10
+
+        for i in range(dist_array.shape[0]):
+
+            gt_dist = dist_array[i, dataloader.test_label[i][0]]
+            prediction = np.sum(dist_array[i, :] < gt_dist)
+            dist_temp = np.ones(dist_array[i, :].shape[0])
+            dist_temp[dataloader.test_label[i][1:]] = 0
+            prediction_hit = np.sum((dist_array[i, :] < gt_dist) * dist_temp)
+
+            if prediction < top1_percent:
+                accuracy += 1.0
+            if prediction < top1:
+                accuracy_top1 += 1.0
+            if prediction < top5:
+                accuracy_top5 += 1.0
+            if prediction < top10:
+                accuracy_top10 += 1.0
+            if prediction_hit < top1:
+                accuracy_hit += 1.0
+            data_amount += 1.0
+        accuracy /= data_amount
+        accuracy_top1 /= data_amount
+        accuracy_top5 /= data_amount
+        accuracy_top10 /= data_amount
+        accuracy_hit /= data_amount
+        return accuracy, accuracy_top1, accuracy_top5, accuracy_top10, accuracy_hit

@@ -20,7 +20,7 @@ class CVUSA(torch.utils.data.Dataset):
         csv_path = os.path.join(root, 'splits', csv_file)
         with open(csv_path, 'r') as f:
             lines = f.readlines()
-            pano_ims, sate_ims, item_ids, pano_ann = [], [], [], []
+            pano_ims, sate_ims, polar_ims, item_ids, pano_ann = [], [], [], [], []
             for line in lines:
                 
                 items = line.strip().split(',')
@@ -33,12 +33,14 @@ class CVUSA(torch.utils.data.Dataset):
                     sate_ims.append(items[0].replace('bingmap', 'polarmap').replace('/19', '')) #.replace('jpg', 'png')
                 else:
                     sate_ims.append(items[0])
+                    polar_ims.append(items[0].replace('bingmap', 'polarmap').replace('/19', '')) #.replace('jpg', 'png')
                 
                 item_ids.append(item_id)
                 pano_ims.append(items[1])
                 pano_ann.append(items[2])
-                
+        
         self.pano_ims, self.sate_ims, self.pano_ann, self.item_ids = pano_ims, sate_ims, pano_ann, item_ids
+        self.polar_ims = polar_ims if (use_polar is False) else None
         self.num = len(self.pano_ims)
         print('Load data from {}, total {}'.format(csv_path, self.num))               
 
@@ -70,11 +72,18 @@ class CVUSA(torch.utils.data.Dataset):
         pos_id = index
         sate_path = os.path.join(self.root, self.sate_ims[pos_id])
         pano_path = os.path.join(self.root, self.pano_ims[pos_id])
-        # Load and process images
+        polar_path = os.path.join(self.root, self.polar_ims[pos_id]) if (self.polar_ims is not None) else None
         
+        # Load and process images        
         sate_im = self.load_im(sate_path, resize=self.sate_size)
         pano_im = self.load_im(pano_path, resize=self.pano_size)
-        sample = {'satellite': sate_im, 'street': pano_im}
+        polar_im= self.load_im(polar_path, resize=self.pano_size) if (polar_path is not None) else None
+
+        if polar_im is not None:
+            sample = {'satellite': sate_im, 'street': pano_im, 'polar': polar_im}
+        else:
+            sample = {'satellite': sate_im, 'street': pano_im}
+
         if self.transform_op:
             sample = self.transform_op(sample)
         sample['im_path'] = (sate_path, pano_path)

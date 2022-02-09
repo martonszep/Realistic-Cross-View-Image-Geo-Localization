@@ -67,52 +67,6 @@ def polar_transform_CVUSA(input_dir, output_dir):
     # img_uint = image.astype(np.uint8)
     imageio.imsave(output_dir + img,  image)
     
-    
-
-############################ Apply Polar Transform to Aerial Images in CVACT Dataset #############################
-def polar_transform_CVACT(input_dir, output_dir):
-  S = 1200
-  height = 112
-  width = 616
-
-  i = np.arange(0, height)
-  j = np.arange(0, width)
-  jj, ii = np.meshgrid(j, i)
-
-  y = S / 2. - S / 2. / height * (height - 1 - ii) * np.sin(2 * np.pi * jj / width)
-  x = S / 2. + S / 2. / height * (height - 1 - ii) * np.cos(2 * np.pi * jj / width)
-
-  # input_dir = './placeholder_satview_polish/'
-  # output_dir = './placeholder_polarmap/'
-
-  if not os.path.exists(output_dir):
-      os.makedirs(output_dir)
-  images = os.listdir(input_dir)
-
-  for i, img in enumerate(images):
-      signal = imageio.imread(input_dir + img)
-      image = sample_bilinear(signal, x, y)
-      imageio.imsave(output_dir + img, image)
-      
-
-############################ Prepare Street View Images in CVACT to Accelerate Training Time #############################
-def prepare_street_view_CVACT(input_dir, output_dir):
-  import cv2
-  # input_dir = './placeholder_streetview/'
-  # output_dir = './placeholder_streetview_polish/'
-
-  if not os.path.exists(output_dir):
-      os.makedirs(output_dir)
-
-  images = os.listdir(input_dir)
-
-  for i, img in enumerate(images):
-      signal = imageio.imread(input_dir + img)
-      start = int(832 / 4)
-      image = signal[start: start + int(832 / 2), :, :]
-      image = cv2.resize(image, (616, 112), interpolation=cv2.INTER_AREA)
-      imageio.imsave(output_dir + img, image)
-
 
 ############################ Apply Polar Transform to sat Images in VIGOR Dataset ############################
 def polar_transform_VIGOR(input_dir, output_dir):
