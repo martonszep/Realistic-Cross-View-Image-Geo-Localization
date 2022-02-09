@@ -20,13 +20,6 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=log_file.replace('log.txt', '')) # tensorboard logger
 
     #define networks
-    # generator = define_G(netG=opt.g_model, gpu_ids=opt.gpu_ids)
-    # log_print('Init {} as generator model'.format(opt.g_model))
-
-    # discriminator = define_D(input_c=opt.input_c, output_c=opt.realout_c, ndf=opt.feature_c, netD=opt.d_model,
-    #                             condition=opt.condition, n_layers_D=opt.n_layers, gpu_ids=opt.gpu_ids)
-    # log_print('Init {} as discriminator model'.format(opt.d_model))
-
     retrieval = define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
     log_print('Init {} as retrieval model'.format(opt.r_model))
 
@@ -37,22 +30,9 @@ if __name__ == '__main__':
     # Configure data loader
     composed_transforms = transforms.Compose([RandomHorizontalFlip(),
                                                 ToTensorVIGOR()])
-    # train_dataset = CVUSA(root=opt.data_root, csv_file=opt.train_csv, use_polar=opt.polar, name=opt.name,
-    #                     transform_op=composed_transforms, load_pickle=None)
-    # train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=0)
 
     dataloader = DataLoader(mode=opt.vigor_mode, root=opt.vigor_root, dim=opt.vigor_dim, same_area=True if 'same' in opt.vigor_mode else False, logger=log_print)
     break_iter = int(dataloader.train_data_size / opt.batch_size)
-
-    # val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, use_polar=opt.polar, name=opt.name,
-    #                     transform_op=ToTensor(), load_pickle=None)
-    # val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=0)
-    # log_print('Load datasets from {}: train_set={} val_set={}'.format(opt.data_root, len(train_dataset), len(val_dataset)))
-
-    # for i, data in enumerate(val_loader):
-    #     print(data)
-    #     print(data["street"].shape, data["satellite"].shape)
-    #     break
 
     ret_best_acc = rgan_wrapper.ret_best_acc
     log_print('Start training from epoch {} to {}, best acc: {}'.format(opt.start_epoch, opt.n_epochs, ret_best_acc))
@@ -144,14 +124,6 @@ if __name__ == '__main__':
 
         rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc,
                                         last_ckpt=True)  # Always save last ckpt
-
-        # Save model periodically
-        # if (epoch + 1) % opt.save_step == 0:
-        #     rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc)
-
-        # torch.cuda.empty_cache() # PyTorch thing
-        # print(torch.cuda.memory_allocated())
-        # print(torch.cuda.memory_reserved())
 
         rgan_wrapper.retrieval.eval()
         with torch.no_grad():

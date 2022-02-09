@@ -94,3 +94,45 @@ class BaseModel(ABC):
             if net is not None:
                 for param in net.parameters():
                     param.requires_grad = requires_grad
+
+    def validate_top_VIGOR(self, dist_array, dataloader):
+        # grd_descriptor = grd_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
+        # sat_descriptor = sat_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
+        accuracy = 0.0
+        accuracy_top1 = 0.0
+        accuracy_top5 = 0.0
+        accuracy_top10 = 0.0
+        accuracy_hit = 0.0
+
+        data_amount = 0.0
+        # dist_array = 2 - 2 * np.matmul(grd_descriptor, np.transpose(sat_descriptor))
+        top1_percent = int(dist_array.shape[1] * 0.01) + 1
+        top1 = 1
+        top5 = 5
+        top10 = 10
+
+        for i in range(dist_array.shape[0]):
+
+            gt_dist = dist_array[i, dataloader.test_label[i][0]]
+            prediction = np.sum(dist_array[i, :] < gt_dist)
+            dist_temp = np.ones(dist_array[i, :].shape[0])
+            dist_temp[dataloader.test_label[i][1:]] = 0
+            prediction_hit = np.sum((dist_array[i, :] < gt_dist) * dist_temp)
+
+            if prediction < top1_percent:
+                accuracy += 1.0
+            if prediction < top1:
+                accuracy_top1 += 1.0
+            if prediction < top5:
+                accuracy_top5 += 1.0
+            if prediction < top10:
+                accuracy_top10 += 1.0
+            if prediction_hit < top1:
+                accuracy_hit += 1.0
+            data_amount += 1.0
+        accuracy /= data_amount
+        accuracy_top1 /= data_amount
+        accuracy_top5 /= data_amount
+        accuracy_top10 /= data_amount
+        accuracy_hit /= data_amount
+        return accuracy, accuracy_top1, accuracy_top5, accuracy_top10, accuracy_hit

@@ -67,19 +67,19 @@ class RGANWrapper(BaseModel):
                 }
 
         if last_ckpt:
-            ckpt_name = 'rgan_last_ckpt.pth'
+            ckpt_name = 'last_ckpt.pth'
         elif is_best:
-            ckpt_name = 'rgan_best_ckpt.pth'
+            ckpt_name = 'best_ckpt.pth'
         else:
-            ckpt_name = 'rgan_ckpt_ep{}.pth'.format(epoch + 1)
+            ckpt_name = 'ckpt_ep{}.pth'.format(epoch + 1)
         ckpt_path = os.path.join(out_dir, ckpt_name)
         torch.save(ckpt, ckpt_path)
 
     def load_networks(self):
-        if self.opt.rgan_checkpoint is None:
+        if self.opt.checkpoint is None:
             return
 
-        ckpt_path = self.opt.rgan_checkpoint
+        ckpt_path = self.opt.checkpoint
         ckpt = torch.load(ckpt_path)
 
         self.opt.start_epoch = ckpt['last_epoch'] + 1
@@ -91,46 +91,3 @@ class RGANWrapper(BaseModel):
         self.retrieval.load_state_dict(retrieval_dict)
         self.optimizer_R.load_state_dict(ckpt['optimizer_R_dict'])
 
-
-#****************** this need not be necessarily here, we don't use anything from self
-    def validate_top_VIGOR(self, dist_array, dataloader):
-        # grd_descriptor = grd_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
-        # sat_descriptor = sat_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
-        accuracy = 0.0
-        accuracy_top1 = 0.0
-        accuracy_top5 = 0.0
-        accuracy_top10 = 0.0
-        accuracy_hit = 0.0
-
-        data_amount = 0.0
-        # dist_array = 2 - 2 * np.matmul(grd_descriptor, np.transpose(sat_descriptor))
-        top1_percent = int(dist_array.shape[1] * 0.01) + 1
-        top1 = 1
-        top5 = 5
-        top10 = 10
-
-        for i in range(dist_array.shape[0]):
-
-            gt_dist = dist_array[i, dataloader.test_label[i][0]]
-            prediction = np.sum(dist_array[i, :] < gt_dist)
-            dist_temp = np.ones(dist_array[i, :].shape[0])
-            dist_temp[dataloader.test_label[i][1:]] = 0
-            prediction_hit = np.sum((dist_array[i, :] < gt_dist) * dist_temp)
-
-            if prediction < top1_percent:
-                accuracy += 1.0
-            if prediction < top1:
-                accuracy_top1 += 1.0
-            if prediction < top5:
-                accuracy_top5 += 1.0
-            if prediction < top10:
-                accuracy_top10 += 1.0
-            if prediction_hit < top1:
-                accuracy_hit += 1.0
-            data_amount += 1.0
-        accuracy /= data_amount
-        accuracy_top1 /= data_amount
-        accuracy_top5 /= data_amount
-        accuracy_top10 /= data_amount
-        accuracy_hit /= data_amount
-        return accuracy, accuracy_top1, accuracy_top5, accuracy_top10, accuracy_hit

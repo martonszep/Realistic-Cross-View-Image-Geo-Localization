@@ -24,7 +24,7 @@ if __name__ == '__main__':
     print('Init {} as retrieval model'.format(opt.r_model))
 
     # Initialize network wrapper
-    opt.rgan_checkpoint = os.path.join(opt.results_dir, opt.resume, 'rgan_best_ckpt.pth')
+    opt.checkpoint = os.path.join(opt.results_dir, opt.resume, 'rgan_best_ckpt.pth')
     rgan_wrapper = rgan_wrapper.RGANWrapper(opt, log_file, retrieval)
     # Configure data loader
     val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, use_polar=opt.polar, name=opt.name,
