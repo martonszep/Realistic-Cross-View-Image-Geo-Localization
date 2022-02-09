@@ -23,7 +23,6 @@ class Parser():
         parser.add_argument('--data_root', type=str, default= './data/CVUSA')
         parser.add_argument('--train_csv', type=str, default='train-19zl.csv')
         parser.add_argument('--val_csv', type=str, default='val-19zl.csv')
-        parser.add_argument('--polar', default=False, action='store_true', help='True -> polar transf; False -> spatial transf')
 
         #vigor parameters 
         parser.add_argument('--vigor_mode', type=str, default= 'train_SAFA_CVM-loss-same') # dataloader will use substrings of it
@@ -34,6 +33,9 @@ class Parser():
         parser.add_argument('--r_model', type=str, default='SAFA')
         parser.add_argument('--model_name', type=str, default='tps')
         parser.add_argument('--checkpoint', type=str, default=None)
+        parser.add_argument('--polar', default=False, action='store_true', help='True -> polar transf; False -> spatial transf')
+        parser.add_argument('--use_affine', default=False, action='store_true', help='Has effect only if --polar is not specified. \
+            True -> spatial transformer uses affine transformation; False -> spatial transformer uses thin plate spline transformation')
 
         #train parameters
         parser.add_argument("--n_epochs", type=int, default=20, help="number of epochs of combined training")
