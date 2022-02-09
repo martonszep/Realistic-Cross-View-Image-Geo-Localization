@@ -29,15 +29,28 @@ class SA(nn.Module):
 
 # Siamese network w/o shared weights
 class SAFA(nn.Module):
-    #Modified version of "Spatial-Aware Feature Aggregation for Cross-View Image Based Geo-Localization" paper
-    def __init__(self, sa_num=8, H1=112, W1=616, H2=112, W2=616, use_spatialtr=False, use_tps=True):
+    """ 
+    Modified version of "Spatial-Aware Feature Aggregation for Cross-View Image Based Geo-Localization" paper
+
+    Args:
+        sa_num: Number of attention masks
+        transf_input: Size of the satellite images to be fed into the model (before transformation)
+        transf_output: Size of the satellite images after transformation
+        pano_size: Size of the panorama (street-view) images to be fed into the model
+        use_spatialtr: Whether to use the spatial transformer module
+        use_tps: Whether to use thin plate spline or affine transformation in the spatial transformer. Ineffective if use_spatialtr is False
+    """
+    def __init__(self, sa_num=8, pano_size=(112, 616), transf_input=(256, 256), transf_output=(112, 616), use_spatialtr=False, use_tps=True):
         super().__init__()
 
-        self.spatial_tr = spatial_transf.ComposedSpatialTransf(in_channels=3, spatial_dims=(H2, W2), use_tps=use_tps) if use_spatialtr else None
+        self.spatial_tr = spatial_transf.ComposedSpatialTransf(in_channels=3, output_size=transf_output, input_size=transf_input, use_tps=use_tps) if use_spatialtr else None
         self.transformed_satellite = None
 
         self.extract1 = backbones.ResNet34()
         self.extract2 = backbones.ResNet34()
+
+        H1, W1 = pano_size
+        H2, W2 = transf_output
 
         in_dim1 = (H1 // 8) * (W1 // 8)
         in_dim2 = (H2 // 8) * (W2 // 8)

@@ -19,15 +19,16 @@ if __name__ == '__main__':
     log_print = lambda ms: parse.log(ms, log)
 
     #define networks
-    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
+    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids, 
+                                sate_size=opt.sate_size, pano_size=opt.pano_size, use_tps=not opt.use_affine)
     print('Init {} as retrieval model'.format(opt.r_model))
 
     # Initialize network wrapper
     opt.checkpoint = os.path.join(opt.results_dir, opt.resume, 'rgan_best_ckpt.pth')
     model_wrapper = model_wrapper.ModelWrapper(opt, log_file, retrieval)
     # Configure data loader
-    val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, use_polar=opt.polar, name=opt.name,
-                        transform_op=ToTensor())
+    val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, sate_size=opt.sate_size, pano_size=(opt.pano_size[1],opt.pano_size[0]),
+                        use_polar=opt.polar, name=opt.name, transform_op=ToTensor())
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=0)
 
     log_print('Load test dataset from {}: val_set={}'.format(opt.data_root, len(val_dataset)))

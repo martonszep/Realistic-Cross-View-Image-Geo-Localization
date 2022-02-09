@@ -3,7 +3,16 @@ import os
 import torch
 import time
 
+def image_size(s):
+    try:
+        x, y = map(int, s.split(','))
+        return x, y
+    except:
+        raise argparse.ArgumentTypeError("Image size must be x,y")
+
+
 class Parser():
+    """ Helper class for parsing arguments and logging."""
     def __init__(self):
         self.initialized = False
 
@@ -23,6 +32,10 @@ class Parser():
         parser.add_argument('--data_root', type=str, default= './data/CVUSA') # './data/VIGOR'
         parser.add_argument('--train_csv', type=str, default='train-19zl.csv')
         parser.add_argument('--val_csv', type=str, default='val-19zl.csv')
+        parser.add_argument('--sate_size', help="Size of the satellite images (HxW) to be fed \
+            into the model", default="256, 256", type=image_size, nargs=2) # default for vigor: (160, 160)
+        parser.add_argument('--pano_size', help="Size of the panorama images (HxW) to be fed \
+            into the model", default="112, 616", type=image_size, nargs=2) # default for vigor: (160, 320)
 
         #vigor parameters 
         parser.add_argument('--vigor_mode', type=str, default= 'train_SAFA_CVM-loss-same') # dataloader will use substrings of it

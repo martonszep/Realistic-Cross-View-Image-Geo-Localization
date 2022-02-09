@@ -10,6 +10,7 @@ gb = lambda bs: bs / 2. ** 30
 
 
 def get_sys_mem():
+    """ Function to estimate memory usage."""
     p = psutil.Process()
     pmem = p.memory_info()
 
@@ -54,6 +55,7 @@ def make_deterministic(seed):
 
 
 def config2str(config):
+    """ Function to help with printing of configuration."""
     print_ignore = ['weights_dict', 'optimizer_dict']
     args = vars(config)
     separator = '\n'
