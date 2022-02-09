@@ -28,15 +28,16 @@ def convert_image_np_VIGOR(inp):
 
 class DataLoader:
 
-    def __init__(self, mode='', root="", dim=4096, same_area=True, logger=print):
+    def __init__(self, mode='', root="", dim=4096, same_area=True, if_polar=False, logger=print):
         self.mode = mode
         self.root = root
-        self.sat_size = [160, 160]  # [320, 320] 
+        self.sat_size = [160, 320] if if_polar else [160, 160]  # [320, 320] 
         self.grd_size = [160, 320]  # [320, 640]
         self.same_area = same_area
+        self.if_polar = if_polar
         label_root = 'splits'
 
-        if same_area:
+        if same_area: # 'NewYork', 'Seattle', 'SanFrancisco', 'Chicago'
             self.train_city_list = ['NewYork', 'Seattle', 'SanFrancisco', 'Chicago'] # modify list to include/exclude certain cities from training
             self.test_city_list = ['NewYork', 'Seattle', 'SanFrancisco', 'Chicago'] # modify list to include/exclude certain cities from testing
         else:
@@ -381,6 +382,7 @@ class DataLoader:
                 delta_list = np.ones([batch_size, 2])
                 batch_sat = np.zeros([batch_size, self.sat_size[0], self.sat_size[1], 3], dtype=np.float32)
                 batch_grd = np.zeros([batch_size, self.grd_size[0], self.grd_size[1], 3], dtype=np.float32)
+                batch_polar = np.zeros([batch_size, self.grd_size[0], self.grd_size[1], 3], dtype=np.float32)
                 batch_list = []
                 for batch_idx in range(batch_size):
                     while True:
@@ -389,23 +391,42 @@ class DataLoader:
                             break
                     
                     # to look for corrupt images, insert code here
-                    image_sat, image_grd, delta = self.get_by_idx(img_idx=img_idx, mode=self.mode)
+                    image_sat, img_polar, image_grd, delta = self.get_by_idx(img_idx=img_idx, mode=self.mode)
                     batch_sat[batch_idx, :, :, :] = image_sat
                     batch_grd[batch_idx, :, :, :] = image_grd
+                    batch_polar[batch_idx, :, :, :] = img_polar
                     delta_list[batch_idx, :] = delta
                     batch_list.append(img_idx)
                     
-                # print("-------------------batch ready")
-                return batch_sat, batch_grd, np.array(batch_list), delta_list
+                return batch_sat, batch_polar, batch_grd, np.array(batch_list), delta_list
 
     def get_by_idx(self, img_idx=None, mode='train'):
         if img_idx is None:
             print('no idx!')
             raise Exception
         else:
+            
+            if self.if_polar:
+                img_path = self.train_sat_list[self.train_label[img_idx][0]].replace('/satellite/', '/polar/')
+                img_polar = None
+            else:
+                img_path = self.train_sat_list[self.train_label[img_idx][0]]
+
+                img_polar = cv2.imread(img_path.replace('/satellite/', '/polar/')) 
+                if img_polar is None:
+                    print(
+                        'InputData::get by idx: read fail: %s, ' % (img_path.replace('/satellite/', '/polar/')))
+                    raise Exception
+                img_polar = img_polar.astype(np.float32)
+                img_polar = cv2.resize(img_polar, (self.grd_size[1], self.grd_size[0]), interpolation=cv2.INTER_AREA)
+                img_polar[:, :, 0] -= 103.939  # Blue
+                img_polar[:, :, 1] -= 116.779  # Green
+                img_polar[:, :, 2] -= 123.6  # Red
+                
+
+
             ## read sat image
-            img = cv2.imread(self.train_sat_list[self.train_label[img_idx][0]]) # to the panorama index the corresponding pos sat image is loaded in
-            # print("*******image path=", self.train_sat_list[img_idx])
+            img = cv2.imread(img_path) # to the panorama index the corresponding pos sat image is loaded in
             if img is None:
                 print(
                     'InputData::get by idx: read fail: %s, ' % (self.train_sat_list[self.train_label[img_idx][0]]))
@@ -418,10 +439,6 @@ class DataLoader:
             image_sat = img.copy()
 
             ## read grd image
-            # ground
-            # to look for corrupt images, insert code here
-            # print("*******image path=", self.train_list[img_idx])
-            # print("*******image idx=", img_idx)
             img = cv2.imread(self.train_list[img_idx])
             if img is None:
                 print('InputData::get by idx: read fail: %s, ' % (self.train_list[img_idx]))
@@ -433,7 +450,6 @@ class DataLoader:
             img[:, :, 1] -= 116.779  # Green
             img[:, :, 2] -= 123.6  # Red
             image_grd = img
-            # cv2.imwrite(f"../{img_idx}.jpg", image_grd)
 
             if 'continuous' in mode:
                 randx = random.randrange(1, 4)
@@ -463,7 +479,7 @@ class DataLoader:
                 img_idx = self.get_init_idx()
                 return self.get_by_idx(img_idx, mode=mode)
 
-            return image_sat, image_grd, self.train_delta[img_idx, 0]
+            return image_sat, img_polar, image_grd, self.train_delta[img_idx, 0]
 
     def cal_ranking_train_limited(self):
         assert self.mining_pool_size < self.train_sat_data_size

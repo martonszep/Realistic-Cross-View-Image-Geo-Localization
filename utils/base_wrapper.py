@@ -18,7 +18,11 @@ class BaseModel(ABC):
     def set_input(self, batch):
         sate_ims = batch['satellite']
         pano_ims = batch['street']
-        polar_ims = batch['polar'] if (self.opt.polar is False) else None
+        
+        if 'polar' in batch:
+            polar_ims = batch['polar'] if (self.opt.polar is False) else None
+        else:
+            polar_ims = None
 
         # this is necessary because of the different batch sizes of the two image sets in the VIGOR validation code
         if sate_ims is not None:

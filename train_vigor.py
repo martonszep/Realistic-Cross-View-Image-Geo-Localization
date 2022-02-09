@@ -17,7 +17,7 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=log_file.replace('log.txt', '')) # tensorboard logger
 
     #define networks
-    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
+    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids, use_tps=not opt.use_affine)
     log_print('Init {} as retrieval model'.format(opt.r_model))
 
     model_wrapper = model_wrapper.ModelWrapper(opt, log_file, retrieval)
@@ -28,7 +28,9 @@ if __name__ == '__main__':
     composed_transforms = transforms.Compose([RandomHorizontalFlip(),
                                                 ToTensorVIGOR()])
 
-    dataloader = DataLoader(mode=opt.vigor_mode, root=opt.data_root, dim=opt.vigor_dim, same_area=True if 'same' in opt.vigor_mode else False, logger=log_print)
+    dataloader = DataLoader(mode=opt.vigor_mode, root=opt.data_root, dim=opt.vigor_dim, 
+                                same_area=True if 'same' in opt.vigor_mode else False, if_polar=opt.polar, logger=log_print)
+
     break_iter = int(dataloader.train_data_size / opt.batch_size)
 
     ret_best_acc = model_wrapper.ret_best_acc
@@ -55,29 +57,33 @@ if __name__ == '__main__':
             # vigor dataloader patched into our training pipeline
 
             # we get here: batch_sat -> [B, H, W, 3], batch_grd -> [B, H, W, 3]
-            batch_sat, batch_grd, _, _ = dataloader.get_next_batch(opt.batch_size)
+            batch_sat, batch_polar, batch_grd, _, _ = dataloader.get_next_batch(opt.batch_size)
             
             composed_data = {
                 "satellite": None,
-                "street": None
+                "street": None,
+                "polar": None
             }
             for i, elem in enumerate(batch_grd):
                 data_to_be_transformed = {
                     "satellite": batch_sat[i],
-                    "street": batch_grd[i]
+                    "street": batch_grd[i],
+                    "polar": batch_polar[i]
                 }
                 transformed_data = composed_transforms(data_to_be_transformed)
                 if i == 0:
                     composed_data["satellite"] = transformed_data["satellite"].unsqueeze(0)
                     composed_data["street"] = transformed_data["street"].unsqueeze(0)
+                    composed_data["polar"] = transformed_data["polar"].unsqueeze(0)
                 else:
                     composed_data["satellite"] = torch.cat((composed_data["satellite"],  transformed_data["satellite"].unsqueeze(0)), 0)
                     composed_data["street"] = torch.cat((composed_data["street"],  transformed_data["street"].unsqueeze(0)), 0)
+                    composed_data["polar"] = torch.cat((composed_data["polar"],  transformed_data["polar"].unsqueeze(0)), 0)
             
             # if next batch does not contain any more images or if we reach the last batch then training of an epoch is done
-            if batch_grd is None or (iter+1) == break_iter:
+            if batch_grd is None or (iter+1) == break_iter or (iter+1) == 2:
                 break
-
+            
             # we transformed the data into: composed_data -> {"satellite": [B, 3, H, W], "street": [B, 3, H, W]}
             model_wrapper.set_input(composed_data)
             model_wrapper.optimize_parameters(epoch)
@@ -185,6 +191,16 @@ if __name__ == '__main__':
                             composed_data["satellite"] = torch.cat((composed_data["satellite"],  transformed_data["satellite"].unsqueeze(0)), 0)
                         if transformed_data["street"] is not None:
                             composed_data["street"] = torch.cat((composed_data["street"],  transformed_data["street"].unsqueeze(0)), 0)
+
+                composed_data["polar"] = None # we don't use this in validation, se we just set it to None
+
+                # saving 8 of the original and transformed satellite images to tensorboard as visualizations
+                # val_i == 11 is arbitrary, you can choose a different index where you find images you like
+                if val_i == 11 and opt.polar is False:
+                    images = composed_data["satellite"][:8].to(model_wrapper.device)
+                    transformed_images = model_wrapper.retrieval.module.spatial_tr(images)
+                    writer.add_images(f"Spatial Transformer/val_Inputs", convert_image_np_VIGOR(images.cpu()), dataformats='NHWC')
+                    writer.add_images(f"Spatial Transformer/val_Outputs", convert_image_np_VIGOR(transformed_images.cpu()), global_step=epoch, dataformats='NHWC')
 
                 # we transformed the data into: composed_data -> {"satellite": [B, 3, H, W], "street": [B, 3, H, W]}
                 model_wrapper.set_input(composed_data)
