@@ -1,11 +1,9 @@
 from data.custom_transforms import *
-from data.cvusa_utils import CVUSA, convert_image_np, convert_image_np_VIGOR
-from data.vigor_dataloader import DataLoader
+from data.vigor_dataloader import DataLoader, convert_image_np_VIGOR
 from torch.utils.tensorboard import SummaryWriter
-from utils import model_wrapper, base_wrapper, parser
+from utils import model_wrapper, parser
 from utils.setup_helper import *
 import time
-from argparse import Namespace
 import os
 
 if __name__ == '__main__':
@@ -30,7 +28,7 @@ if __name__ == '__main__':
     composed_transforms = transforms.Compose([RandomHorizontalFlip(),
                                                 ToTensorVIGOR()])
 
-    dataloader = DataLoader(mode=opt.vigor_mode, root=opt.vigor_root, dim=opt.vigor_dim, same_area=True if 'same' in opt.vigor_mode else False, logger=log_print)
+    dataloader = DataLoader(mode=opt.vigor_mode, root=opt.data_root, dim=opt.vigor_dim, same_area=True if 'same' in opt.vigor_mode else False, logger=log_print)
     break_iter = int(dataloader.train_data_size / opt.batch_size)
 
     ret_best_acc = model_wrapper.ret_best_acc
@@ -51,12 +49,14 @@ if __name__ == '__main__':
         model_wrapper.retrieval.train()
         iter = 0
         while True:
-        # for i, data in enumerate(train_loader):  # inner loop within one epoch
             if iter == 0:
                 start_time_batches = time.time()
 
+            # vigor dataloader patched into our training pipeline
+
+            # we get here: batch_sat -> [B, H, W, 3], batch_grd -> [B, H, W, 3]
             batch_sat, batch_grd, _, _ = dataloader.get_next_batch(opt.batch_size)
-            # we get here: batch_sat -> (batch_size, 320, 320, 3), batch_grd -> (batch_size, 320, 640, 3)
+            
             composed_data = {
                 "satellite": None,
                 "street": None
@@ -74,35 +74,18 @@ if __name__ == '__main__':
                     composed_data["satellite"] = torch.cat((composed_data["satellite"],  transformed_data["satellite"].unsqueeze(0)), 0)
                     composed_data["street"] = torch.cat((composed_data["street"],  transformed_data["street"].unsqueeze(0)), 0)
             
-            if batch_grd is None or (iter+1) == break_iter: # should we test for batch_grd or batch_sat???
-                try:
-                    print("batch_grd=", batch_grd.shape)
-                except:
-                    print("batch_grd=", batch_grd)
-                print("breaking training loop iter=", iter)
-
+            # if next batch does not contain any more images or if we reach the last batch then training of an epoch is done
+            if batch_grd is None or (iter+1) == break_iter:
                 break
 
-            # print(composed_data["satellite"].shape, composed_data["street"].shape)
-            # writer.add_images(f"VIGOR/street", convert_image_np_VIGOR(composed_data["street"].cpu()), dataformats='NHWC') # NHWC
-            # writer.add_images(f"VIGOR/sat", convert_image_np_VIGOR(composed_data["satellite"].cpu()), dataformats='NHWC') # NHWC
-            # writer.close()
-
-            # raise Exception ("interrupt execution for debugging")
-
-            # we transformed the data into
-            #       composed_data -> {"satellite": torch.Size([batch_size, 3, 320, 320]), "street": torch.Size([batch_size, 3, 320, 640])}
+            # we transformed the data into: composed_data -> {"satellite": [B, 3, H, W], "street": [B, 3, H, W]}
             model_wrapper.set_input(composed_data)
             model_wrapper.optimize_parameters(epoch)
 
             fake_street_batches_t.append(model_wrapper.fake_street_out.cpu().data)
             street_batches_t.append(model_wrapper.street_out.cpu().data)
             epoch_retrieval_loss_t.append(model_wrapper.r_loss.item())
-           
-            # if (iter + 1) % 40 == 0 or (iter + 1) == break_iter:
-            #     print("batch=", iter+1)
-            #     print("time=", time.time() - start_time_batches)
-            #     start_time_batches = time.time()
+          
             if (iter + 1) % 40 == 0 or (iter + 2) == break_iter:
                 fake_street_vec = torch.cat(fake_street_batches_t, dim=0)
                 street_vec = torch.cat(street_batches_t, dim=0)
@@ -119,34 +102,35 @@ if __name__ == '__main__':
 
             iter+=1
         
-        writer.add_scalar('Loss/Train', np.mean(epoch_retrieval_loss_t), epoch) # tensorboard logging
+        writer.add_scalar('Loss/Train', np.mean(epoch_retrieval_loss_t), epoch)
 
         model_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc,
                                         last_ckpt=True)  # Always save last ckpt
 
+    # validation phase
+    # this is very time consuming, so maybe don't execute it at the end of each epoch
         model_wrapper.retrieval.eval()
         with torch.no_grad():
-            # for i, data in enumerate(val_loader):
             val_i = 0
             out = False
             while True:
                 if val_i == 0:
                     start_time_batches = time.time()
 
-                # we get here: batch_sat -> (batch_size, 320, 320, 3), batch_grd -> (batch_size, 320, 640, 3)
+                # we get here: batch_sat -> [B, H, W, 3], batch_grd -> [B, H, W, 3]
                 batch_sat = dataloader.next_sat_scan(opt.batch_size*3)
                 batch_grd = None
 
+                 # this dataloader will run out first, so we are making sure, that it does not start over once its out
                 if not out:
                     batch_grd = dataloader.next_grd_scan(opt.batch_size*2)
                 
                 if batch_grd is None:
-                    # print("**********batch_grd is out")
                     out = True
                     
-                
-                if batch_sat is None: # or val_i == 1
-                    # print("^^^^^^^^^^^^^^^break after 40 iters")
+                # terminating the validation loop once the satellite images are out too
+                # as we have evaluated all images and we can now compute the metrics on them
+                if batch_sat is None: 
                     break
                 
                 composed_data = {
@@ -201,12 +185,8 @@ if __name__ == '__main__':
                             composed_data["satellite"] = torch.cat((composed_data["satellite"],  transformed_data["satellite"].unsqueeze(0)), 0)
                         if transformed_data["street"] is not None:
                             composed_data["street"] = torch.cat((composed_data["street"],  transformed_data["street"].unsqueeze(0)), 0)
-                
-                # print(composed_data)
-                # print(composed_data["satellite"].shape, composed_data["street"].shape)
 
-                # we transformed the data into
-                    #       composed_data -> {"satellite": torch.Size([batch_size, 3, 320, 320]), "street": torch.Size([batch_size, 3, 320, 640])}
+                # we transformed the data into: composed_data -> {"satellite": [B, 3, H, W], "street": [B, 3, H, W]}
                 model_wrapper.set_input(composed_data)
                 model_wrapper.eval_model()
 
@@ -217,38 +197,12 @@ if __name__ == '__main__':
                     fake_street_batches_v.append(new_fake_street.cpu().data)
                 if new_street is not None:
                     street_batches_v.append(new_street.cpu().data)
-                # epoch_retrieval_loss_v.append(model_wrapper.r_loss.item())
-
-                if (val_i + 1) % 40 == 0:
-                    print("val batch=", val_i+1)
-                    print("val time=", time.time() - start_time_batches)
-                    start_time_batches = time.time()
 
                 val_i += 1
 
-        rss, vms, cpu_mem_percent_os, cpu_av_mem_os, cpu_mem_percent, cpu_available_mem_percent = get_sys_mem()
-        log_print(".........Before matmul...........")
-        log_print('Memory usage: rss={:.2f}GB vms={:.2f}GB Time:{:.2f}s\n'.format(rss, vms, time.time() - start_time))
-        log_print('os mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent_os, cpu_av_mem_os))
-        log_print('psutil mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent, cpu_available_mem_percent))
-        
-        # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
-        fake_street_vec = torch.cat(fake_street_batches_v, dim=0).numpy() #.astype(np.float16)
-        street_vec = torch.cat(street_batches_v, dim=0).numpy() #.astype(np.float16)
-        # street_vec_permuted = street_vec.permute(1, 0) # we are in numpy now, we can just use transpose instead of permute
-        dist_array = 2 - 2 * np.matmul(street_vec, np.transpose(fake_street_vec)) # just to check memory usage
-        
-
-        rss, vms, cpu_mem_percent_os, cpu_av_mem_os, cpu_mem_percent, cpu_available_mem_percent = get_sys_mem()
-        log_print(".........After matmul...........")
-        log_print('Memory usage: rss={:.2f}GB vms={:.2f}GB Time:{:.2f}s\n'.format(rss, vms, time.time() - start_time))
-        log_print('os mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent_os, cpu_av_mem_os))
-        log_print('psutil mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent, cpu_available_mem_percent))
-
-        # tp1 = model_wrapper.mutual_topk_acc(dists, topk=1)
-        # tp5 = model_wrapper.mutual_topk_acc(dists, topk=5)
-        # tp10 = model_wrapper.mutual_topk_acc(dists, topk=10)
-        print(street_vec.shape, fake_street_vec.shape)
+        fake_street_vec = torch.cat(fake_street_batches_v, dim=0).numpy() 
+        street_vec = torch.cat(street_batches_v, dim=0).numpy()
+        dist_array = 2 - 2 * np.matmul(street_vec, np.transpose(fake_street_vec))
 
         val_accuracy, val_accuracy_top1, val_accuracy_top5, val_accuracy_top10, hit_rate = model_wrapper.validate_top_VIGOR(dist_array, dataloader)
         
@@ -257,15 +211,6 @@ if __name__ == '__main__':
 
         log_print('Evaluation epoch %d: accuracy = %.1f%% , top1: %.1f%%, top5: %.1f%%, top10: %.1f%%, hit_rate: %.1f%%' % (
             epoch, val_accuracy * 100.0, val_accuracy_top1 * 100.0, val_accuracy_top5 * 100.0, val_accuracy_top10 * 100.0, hit_rate * 100.0))
-
-        # num = len(dists)
-        # tp1p = model_wrapper.mutual_topk_acc(dists, topk=0.01 * num)
-        # acc = Namespace(num=len(dists), tp1=tp1, tp5=tp5, tp10=tp10, tp1p=tp1p)
-
-        # log_print('\nEvaluate Samples:{num:d}\nRecall(p2s/s2p) tp1:{tp1[0]:.2f}/{tp1[1]:.2f} ' \
-        #             'tp5:{tp5[0]:.2f}/{tp5[1]:.2f} tp10:{tp10[0]:.2f}/{tp10[1]:.2f} ' \
-        #             'tp1%:{tp1p[0]:.2f}/{tp1p[1]:.2f}'.format(epoch + 1, num=acc.num, tp1=acc.tp1,
-        #                                                     tp5=acc.tp5, tp10=acc.tp10, tp1p=acc.tp1p))
         
         # tensorboard eval logging
         # writer.add_scalar('Loss/Val', np.mean(epoch_retrieval_loss_v), epoch)
@@ -286,12 +231,3 @@ if __name__ == '__main__':
         log_print('Memory usage: rss={:.2f}GB vms={:.2f}GB Time:{:.2f}s\n'.format(rss, vms, time.time() - start_time))
         log_print('os mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent_os, cpu_av_mem_os))
         log_print('psutil mem percent: {} available mem percent: {} \n'.format(cpu_mem_percent, cpu_available_mem_percent))
-
-    # Visualize the STN transformation on some input batch
-    # if opt.polar is False:
-    #     with torch.no_grad():
-    #         images = next(iter(val_loader))['satellite'][:16].to(model_wrapper.device)
-    #         transformed_images = model_wrapper.retrieval.module.spatial_tr(images)
-    #         writer.add_images(f"Spatial Transformer/Inputs", convert_image_np(images.cpu()), dataformats='NHWC')
-    #         writer.add_images(f"Spatial Transformer/Outputs", convert_image_np(transformed_images.cpu()), dataformats='NHWC')
-    #         writer.close()

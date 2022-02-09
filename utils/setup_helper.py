@@ -1,7 +1,6 @@
 import torch
 import random
 import numpy as np
-from collections import OrderedDict
 import psutil
 import os
 
@@ -15,11 +14,13 @@ def get_sys_mem():
     pmem = p.memory_info()
 
     # only for linux!
+    # possibly not giving us accurate values though
     total_memory, used_memory, free_memory = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
     cpu_mem_percent_os = round((used_memory/total_memory) * 100, 2)
     cpu_av_mem_os = round((free_memory/total_memory) * 100, 2)
 
     # not os specific
+    # seems to be more reliable
     cpu_mem_percent = round(psutil.virtual_memory().percent, 2)
     cpu_available_mem_percent = round(psutil.virtual_memory().available * 100 / psutil.virtual_memory().total, 2)
 

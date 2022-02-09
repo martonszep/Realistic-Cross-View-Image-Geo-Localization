@@ -1,16 +1,32 @@
+# based on: https://github.com/Jeff-Zilence/VIGOR/blob/main/dataloader.py
+
 #coding=utf-8
-import os,sys
+import os
 import cv2
 import random
 import numpy as np
-import matplotlib.pyplot as plt
-from datetime import datetime
 
+
+def convert_image_np_VIGOR(inp):
+    """Convert a Tensor to numpy image for the VIGOR dataset."""
+
+    if inp.ndim == 3:
+        inp = inp.unsqueeze(0).numpy().transpose((0, 2, 3, 1))
+    elif inp.ndim == 4:
+        inp = inp.numpy().transpose((0, 2, 3, 1))
+    else:
+        raise ValueError('The input should be an image (ndim=3) or an array of images (ndim=4)!')
+    
+    # according to the normalization in VIGOR
+    mean = np.array([0.483, 0.456, 0.406]) # RGB
+    std = np.array([1, 1, 1])
+
+    for i in range(inp.shape[0]):        
+        inp[i] = std * inp[i] + mean
+        inp[i] = np.clip(inp[i], 0, 1)
+    return inp
 
 class DataLoader:
-
-    # please modify the root
-    # root = '../Realistic-Cross-View-Image-Geo-Localization/data/VIGOR'
 
     def __init__(self, mode='', root="", dim=4096, same_area=True, logger=print):
         self.mode = mode
@@ -21,8 +37,8 @@ class DataLoader:
         label_root = 'splits'
 
         if same_area:
-            self.train_city_list = ['NewYork', 'Seattle', 'SanFrancisco', 'Chicago'] # 'NewYork', 'Seattle', 'SanFrancisco', 'Chicago'
-            self.test_city_list = ['NewYork', 'Seattle', 'SanFrancisco', 'Chicago'] # 'NewYork', 'Seattle', 'SanFrancisco', 'Chicago'
+            self.train_city_list = ['NewYork', 'Seattle', 'SanFrancisco', 'Chicago'] # modify list to include/exclude certain cities from training
+            self.test_city_list = ['NewYork', 'Seattle', 'SanFrancisco', 'Chicago'] # modify list to include/exclude certain cities from testing
         else:
             self.train_city_list = ['NewYork', 'Seattle']
             self.test_city_list = ['SanFrancisco', 'Chicago']
