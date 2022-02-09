@@ -6,7 +6,7 @@ Cross-view image-based geo-localization aims to determine the location of a give
 
 <img src="./images/model.png">
 
-Our model architecture is based on [Shi et al., 2019](https://proceedings.neurips.cc/paper/2019/file/ba2f0015122a5955f8b3a50240fb91b2-Paper.pdf) and is extended to include a transformation block after the input satellite image, where either polar transformation or a spatial transformation network could be activated. The spatial transformer network can be either initialized with an affine transformation, with a composed affine transformation or with a thin plate spline transformation (based on this [pytorch implemenation](https://github.com/WarBean/tps_stn_pytorch)). Note that the L1 loss can only be activated on the output of the spatial transformer network to guide its learned transformation into the direction of the polar transformation.
+Our model architecture is based on ([Shi et al., 2019](https://proceedings.neurips.cc/paper/2019/file/ba2f0015122a5955f8b3a50240fb91b2-Paper.pdf), [Toker et al., 2021](https://openaccess.thecvf.com/content/CVPR2021/papers/Toker_Coming_Down_to_Earth_Satellite-to-Street_View_Synthesis_for_Geo-Localization_CVPR_2021_paper.pdf)) and is extended to include a transformation block after the input satellite image, where either polar transformation or a spatial transformation network could be activated. The spatial transformer network can be either initialized with an affine transformation, with a composed affine transformation or with a thin plate spline transformation (based on this [pytorch implemenation](https://github.com/WarBean/tps_stn_pytorch)). Note that the L1 loss can only be activated on the output of the spatial transformer network to guide its learned transformation into the direction of the polar transformation.
 
 <img src="./images/transformations.png">
 
@@ -27,4 +27,4 @@ To test our architecture run  `test_cvusa.py` and `test_vigor.py`.
 
 The code has been implemented & tested with Python 3.7.12 and Pytorch 1.10.0.
 
-This repository is based on [Toker et al., 2021](https://openaccess.thecvf.com/content/CVPR2021/papers/Toker_Coming_Down_to_Earth_Satellite-to-Street_View_Synthesis_for_Geo-Localization_CVPR_2021_paper.pdf).
+This repository is based on .
