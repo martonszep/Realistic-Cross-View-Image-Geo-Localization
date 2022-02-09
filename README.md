@@ -19,7 +19,7 @@ Our model architecture is based on [Shi et al., 2019](https://proceedings.neurip
 * The polar transformation script is based on [this source](https://github.com/shiyujiao/cross_view_localization_SAFA/blob/master/script/data_preparation.py), you can find it `/data/convert_polar.py`.
 
 ### Train 
-* For CVUSA, use [`train_cvusa.py`], and see options under [`utils/parser.py`](https://github.com/Notram1/Realistic-Cross-View-Image-Geo-Localization/blob/readme/utils/parser.py). 
+* For CVUSA, use `train_cvusa.py`, and see options under [`utils/parser.py`](https://github.com/Notram1/Realistic-Cross-View-Image-Geo-Localization/blob/readme/utils/parser.py). 
 * For VIGOR, use `train_vigor.py`, and see options under [`utils/parser.py`](https://github.com/Notram1/Realistic-Cross-View-Image-Geo-Localization/blob/readme/utils/parser.py).
 
 ### Test 
