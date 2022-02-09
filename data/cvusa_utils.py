@@ -1,7 +1,6 @@
 import os
 from data.custom_transforms import *
 import torch
-import numpy
 import _pickle as cPickle
 
 
@@ -113,26 +112,6 @@ def convert_image_np(inp):
     
     mean = np.array([0.485, 0.456, 0.406])
     std = np.array([0.229, 0.224, 0.225])
-
-    for i in range(inp.shape[0]):        
-        inp[i] = std * inp[i] + mean
-        inp[i] = np.clip(inp[i], 0, 1)
-    return inp
-
-
-def convert_image_np_VIGOR(inp):
-    """Convert a Tensor to numpy image."""
-
-    if inp.ndim == 3:
-        inp = inp.unsqueeze(0).numpy().transpose((0, 2, 3, 1))
-    elif inp.ndim == 4:
-        inp = inp.numpy().transpose((0, 2, 3, 1))
-    else:
-        raise ValueError('The input should be an image (ndim=3) or an array of images (ndim=4)!')
-    
-    # according to the normalization in VIGOR dataloader
-    mean = np.array([0.483, 0.456, 0.406]) # RGB
-    std = np.array([1, 1, 1])
 
     for i in range(inp.shape[0]):        
         inp[i] = std * inp[i] + mean
