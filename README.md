@@ -1,13 +1,28 @@
 # Realistic-Cross-View-Image-Geo-Localization
+<img src="./images/transformations.png">
 
-Cross-view image geo-localization is the task of localizing street-view query images by matching them with satellite
-corresponding to a GPS location. The complexity of the problem comes, first, from the large gap between the image domains: there is a drastic change in viewpoint and appearance between them.
+### Abstract 
+Cross-view image-based geo-localization aims to determine the location of a given street view image by matching it against a collection of geo-tagged satellite images. Recent work ([Shi et al., 2019](https://proceedings.neurips.cc/paper/2019/file/ba2f0015122a5955f8b3a50240fb91b2-Paper.pdf); [Toker et al., 2021](https://openaccess.thecvf.com/content/CVPR2021/papers/Toker_Coming_Down_to_Earth_Satellite-to-Street_View_Synthesis_for_Geo-Localization_CVPR_2021_paper.pdf), [Shi et al., 2020](https://openaccess.thecvf.com/content_CVPR_2020/papers/Shi_Where_Am_I_Looking_At_Joint_Location_and_Orientation_Estimation_CVPR_2020_paper.pdf)) relies on the polar coordinate transformation to bring the two particular image domains closer to each other. This comes with the assumption of an existing reference satellite image exactly centered at the location of the query street view image. We rule out this assumption and replace the polar transformation with a trainable [Spatial Transformer Network (STN)](https://proceedings.neurips.cc/paper/2015/file/33ceb07bf4eeb3da587e268d663aba1a-Paper.pdf). Our model performs close to the state of the art. Furthermore, our experiments show that, with the appropriate parameter setting, the STN using [thin plate spline transformation](https://ieeexplore.ieee.org/document/24792) is a viable choice for this task.
 
-To bridge the domain gap, the majority of previous work ([Shi et al., 2019](https://proceedings.neurips.cc/paper/2019/file/ba2f0015122a5955f8b3a50240fb91b2-Paper.pdf); [Toker et al., 2021](https://openaccess.thecvf.com/content/CVPR2021/papers/Toker_Coming_Down_to_Earth_Satellite-to-Street_View_Synthesis_for_Geo-Localization_CVPR_2021_paper.pdf), [Shi et al., 2020](https://openaccess.thecvf.com/content_CVPR_2020/papers/Shi_Where_Am_I_Looking_At_Joint_Location_and_Orientation_Estimation_CVPR_2020_paper.pdf)) has approached the problem by using a polar coordinate transformation as a preprocessing step before solving the image retrieval problem and achieved surprisingly high retrieval accuracy on city-scale datasets. The polar coordinate transformation assumes that there exists an aerial-view reference image exactly centered at the location of any street-view query image. This is not applicable for practical scenarios.
+<img src="./images/model.png">
 
-We investigate the performance of [spatial transformers](https://proceedings.neurips.cc/paper/2015/file/33ceb07bf4eeb3da587e268d663aba1a-Paper.pdf) in this task, with the hope to learn
-a transformation similar to the polar transformation directly from the data and extract domain-invariant features.
+Our model architecture is based on [Shi et al., 2019](https://proceedings.neurips.cc/paper/2019/file/ba2f0015122a5955f8b3a50240fb91b2-Paper.pdf) and is extended to include a transformation block after the input satellite image, where either polar transformation or a spatial transformation network could be activated. The spatial transformer network can be either initialized with an affine transformation, with a composed affine transformation or with a thin plate spline transformation (based on this [pytorch implemenation](https://github.com/WarBean/tps_stn_pytorch)). Note that the L1 loss can only be activated on the output of the spatial transformer network to guide its learned transformation into the direction of the polar transformation.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Notram1/Realistic-Cross-View-Image-Geo-Localization/blob/main/main.ipynb)
+### Usage
+
+## Datasets and Polar transformation
+
+* In our experiments, we use CVUSA and VIGOR datasets. Use <a href="https://github.com/viibridges/crossnet">this link</a> to reach the CVUSA dataset and use <a href="https://github.com/Jeff-Zilence/VIGOR">this link</a> to reach the VIGOR dataset. 
+* Change dataset paths under `helper/parser.py`. 
+* The polar transformation script is copied from https://github.com/shiyujiao/cross_view_localization_SAFA/blob/master/script/data_preparation.py, you can find it `/data/convert_polar.py`.
+
+## Train 
+* For CVUSA, use `train_cvusa.py` 
+* For VIGOR, use `train_vigor.py` 
+
+## Test 
+To test our architecture use the pretained models, given above, and run  `cvusa_test.py` and `cvact_test.py`.
+
+The code has been implemented & tested with Python 3.7.12 and Pytorch 1.10.0.
 
 This repository is based on [Toker et al., 2021](https://openaccess.thecvf.com/content/CVPR2021/papers/Toker_Coming_Down_to_Earth_Satellite-to-Street_View_Synthesis_for_Geo-Localization_CVPR_2021_paper.pdf).
