@@ -6,11 +6,11 @@ import torch
 from networks.tps import TPSGridGen
 
 class AffineLocalization(nn.Module):
-    def __init__(self, in_channels, sate_input=True) -> None:
+    def __init__(self, in_channels, input_size) -> None:
         super(AffineLocalization, self).__init__()
 
-        # Fully connected input size for images of size (256, 256) or (112, 616)
-        fc_size = 13*13 if sate_input==True else 4*36
+        # Calculation of fully connected layer size based on conv and maxpool layers below
+        fc_size = np.prod(((((np.asarray(input_size) -6) //2 -4) //2 -2) //2 -2) //2)
 
         # Affine spatial transformer localization-network
         self.localization = nn.Sequential(
@@ -47,14 +47,13 @@ class AffineLocalization(nn.Module):
         return self.localization(x)
 
 class TPSLocalization(nn.Module):
-    def __init__(self, in_channels,  grid_height, grid_width, target_control_points, sate_input=True, bounded = False) -> None:
+    def __init__(self, in_channels, input_size, grid_height, grid_width, target_control_points, bounded = False) -> None:
         super(TPSLocalization, self).__init__()
 
         self.bounded = bounded
 
-        # Fully connected input size for images of size (256, 256) or (112, 616)
-        fc_size = 13*13 if sate_input==True else 4*36 #CVUSA
-        # fc_size = 7*7 #VIGOR
+        # Calculation of fully connected layer size based on conv and maxpool layers below
+        fc_size = np.prod(((((np.asarray(input_size) -6) //2 -4) //2 -2) //2 -2) //2)
 
         # Thin plate spline spatial transformer localization-network
         self.localization = nn.Sequential(
@@ -94,16 +93,16 @@ class TPSLocalization(nn.Module):
 
 # Extension of https://pytorch.org/tutorials/intermediate/spatial_transformer_tutorial.html
 class SpatialTransf (nn.Module):
-    def __init__(self, in_channels, spatial_dims, sate_input=True, use_tps=True, span_range=0.9, grid_height=6, grid_width=10):
+    def __init__(self, in_channels, output_size, input_size, use_tps=True, span_range=0.9, grid_height=6, grid_width=10):
         super(SpatialTransf, self).__init__()
 
         self._in_ch = in_channels 
-        self.spatial_dims = spatial_dims
+        self.output_size = output_size
         self.use_tps = use_tps
 
         if self.use_tps == True:
             r1 = r2 = span_range # span_range_width and span_range_height
-            image_height, image_width = self.spatial_dims
+            image_height, image_width = self.output_size
 
             assert r1 < 1 and r2 < 1 # if >= 1, atanh will cause error in TPSLocalization with bounded=True
             target_control_points = torch.Tensor(list(itertools.product(
@@ -112,20 +111,20 @@ class SpatialTransf (nn.Module):
             )))
             Y, X = target_control_points.split(1, dim = 1)
             target_control_points = torch.cat([X, Y], dim = 1)
-            self.localization = TPSLocalization(self._in_ch, grid_height, grid_width, target_control_points)
+            self.localization = TPSLocalization(self._in_ch, input_size, grid_height, grid_width, target_control_points)
             self.tps = TPSGridGen(image_height, image_width, target_control_points)
         else:
-            self.localization = AffineLocalization(in_channels=in_channels, sate_input=sate_input)
+            self.localization = AffineLocalization(in_channels=in_channels, input_size=input_size)
 
     def forward(self, x):
         if self.use_tps == True:
             source_control_points = self.localization(x)
             source_coordinate = self.tps(source_control_points)
-            grid = source_coordinate.view(x.size(0), *self.spatial_dims, 2) # required input size for grid_sampler
+            grid = source_coordinate.view(x.size(0), *self.output_size, 2) # required input size for grid_sampler
         else:
             theta = self.localization(x)
             theta = theta.view(-1, 2, 3) # 2D affine transf param
-            grid = F.affine_grid(theta, (x.size(0), self._in_ch, *self.spatial_dims), align_corners=False)
+            grid = F.affine_grid(theta, (x.size(0), self._in_ch, *self.output_size), align_corners=False)
         
         x = F.grid_sample(x, grid, mode='bilinear', align_corners=False)
         return x     
@@ -176,22 +175,22 @@ class ResidualBlock(nn.Module):
 
 
 class ComposedSpatialTransf (nn.Module):
-    def __init__(self, in_channels, spatial_dims, latent_channels=8, use_tps=True):
+    def __init__(self, in_channels, output_size, input_size, latent_channels=8, use_tps=True):
         super(ComposedSpatialTransf, self).__init__()
 
         self.use_tps = use_tps
 
         self.spatial_block = nn.Sequential(
-            SpatialTransf(in_channels, spatial_dims, sate_input=True, use_tps=self.use_tps)
+            SpatialTransf(in_channels, output_size, input_size=input_size, use_tps=self.use_tps)
         )
 
         # possibility to stack multiple spatial transformers with residual blocks in between
         # self.spatial_block = nn.Sequential(
-        #     SpatialTransf(in_channels, spatial_dims, sate_input=True, use_tps=self.use_tps),
+        #     SpatialTransf(in_channels, output_size, input_size=True, use_tps=self.use_tps),
         #     ResidualBlock(in_channels, latent_channels),
-        #     SpatialTransf(latent_channels, spatial_dims, sate_input=False, use_tps=self.use_tps),
+        #     SpatialTransf(latent_channels, output_size, input_size=output_size, use_tps=self.use_tps),
         #     ResidualBlock(latent_channels, in_channels),
-        #     SpatialTransf(in_channels, spatial_dims, sate_input=False, use_tps=self.use_tps)
+        #     SpatialTransf(in_channels, output_size, input_size=output_size, use_tps=self.use_tps)
         # )
 
     def forward(self, x):
