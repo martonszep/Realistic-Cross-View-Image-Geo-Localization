@@ -18,7 +18,8 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=log_file.replace('log.txt', '')) # tensorboard logger
 
     #define networks
-    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids, use_tps=not opt.use_affine)
+    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids, 
+                                sate_size=opt.sate_size, pano_size=opt.pano_size, use_tps=not opt.use_affine)
     log_print('Init {} as retrieval model'.format(opt.r_model))
 
     model_wrapper = model_wrapper.ModelWrapper(opt, log_file, retrieval)
@@ -28,12 +29,12 @@ if __name__ == '__main__':
     # Configure data loader
     composed_transforms = transforms.Compose([RandomHorizontalFlip(),
                                                 ToTensor()])
-    train_dataset = CVUSA(root=opt.data_root, csv_file=opt.train_csv, use_polar=opt.polar, name=opt.name,
-                        transform_op=composed_transforms)
+    train_dataset = CVUSA(root=opt.data_root, csv_file=opt.train_csv, sate_size=opt.sate_size, pano_size=(opt.pano_size[1],opt.pano_size[0]), 
+                        use_polar=opt.polar, name=opt.name, transform_op=composed_transforms)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=0)
 
-    val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, use_polar=opt.polar, name=opt.name,
-                        transform_op=ToTensor())
+    val_dataset = CVUSA(root=opt.data_root, csv_file=opt.val_csv, sate_size=opt.sate_size, pano_size=(opt.pano_size[1],opt.pano_size[0]),
+                        use_polar=opt.polar, name=opt.name, transform_op=ToTensor())
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=0)
     log_print('Load datasets from {}: train_set={} val_set={}'.format(opt.data_root, len(train_dataset), len(val_dataset)))
 

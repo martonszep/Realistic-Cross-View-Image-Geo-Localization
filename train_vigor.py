@@ -19,7 +19,8 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=log_file.replace('log.txt', '')) # tensorboard logger
 
     #define networks
-    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
+    retrieval = model_wrapper.define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids, 
+                            sate_size=opt.sate_size, pano_size=opt.pano_size,use_tps=not opt.use_affine)
     log_print('Init {} as retrieval model'.format(opt.r_model))
 
     model_wrapper = model_wrapper.ModelWrapper(opt, log_file, retrieval)

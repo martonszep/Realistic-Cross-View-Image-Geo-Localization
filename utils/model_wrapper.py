@@ -40,12 +40,6 @@ def define_R(ret_method, polar, gpu_ids=[], sate_size=(256, 256), pano_size=(112
     net = None
     if 'SAFA' == ret_method:
         sa_num = 8
-        # VIGOR
-        # sate_size = (160, 160) # 320, 320
-        # pano_size = (160, 320) # 320, 640
-        # CVUSA
-        sate_size = (256, 256)
-        pano_size = (112, 616)
         net = safa.SAFA(sa_num=sa_num, pano_size=pano_size, transf_input=sate_size, transf_output=pano_size, use_spatialtr=not polar, use_tps=use_tps)
     else:
         raise NotImplementedError('Retrieval model name [%s] is not recognized' % ret_method)
