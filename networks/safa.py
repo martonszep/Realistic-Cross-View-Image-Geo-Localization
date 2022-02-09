@@ -59,10 +59,7 @@ class SAFA(nn.Module):
 
     def forward(self, street, satellite):
 
-        if self.spatial_tr is not None:
-            self.transformed_satellite = self.spatial_tr(satellite)
-            satellite = self.transformed_satellite
-
+        # this is necessary because of the different batch sizes of the two image sets in the VIGOR validation code
         if street is None:
             street_extracted = None
         else:
@@ -81,9 +78,15 @@ class SAFA(nn.Module):
             # Feature reduction
             street_extracted = F.normalize(street_extracted, p=2, dim=1)
 
+        # this is necessary because of the different batch sizes of the two image sets in the VIGOR validation code
         if satellite is None:
             sat_extracted = None
         else:
+
+            if self.spatial_tr is not None:
+                self.transformed_satellite = self.spatial_tr(satellite)
+                satellite = self.transformed_satellite
+            
             # Local feature extraction
             sat_extracted = self.extract2(satellite)
 

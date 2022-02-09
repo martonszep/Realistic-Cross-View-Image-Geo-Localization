@@ -2,9 +2,6 @@
 import numpy as np
 import imageio
 import os
-from PIL import Image
-from matplotlib import pyplot
-
 
 def sample_within_bounds(signal, x, y, bounds):
     xmin, xmax, ymin, ymax = bounds
@@ -60,15 +57,12 @@ def polar_transform_CVUSA(input_dir, output_dir):
   
 
   for i, img in enumerate(images):
-    if i % 1000:
-        print('image=', i)
     signal = imageio.imread(input_dir + img)
     image = sample_bilinear(signal, x, y)
-    # img_uint = image.astype(np.uint8)
     imageio.imsave(output_dir + img,  image)
     
 
-############################ Apply Polar Transform to sat Images in VIGOR Dataset ############################
+############################ Apply Polar Transform to Aerial Images in VIGOR Dataset ############################
 def polar_transform_VIGOR(input_dir, output_dir):
 
   S = 640
@@ -82,8 +76,8 @@ def polar_transform_VIGOR(input_dir, output_dir):
   y = S / 2. - S / 2. / height * (height - 1 - ii) * np.sin(2 * np.pi * jj / width)
   x = S / 2. + S / 2. / height * (height - 1 - ii) * np.cos(2 * np.pi * jj / width)
 
-  # input_dir = 'VIGOR/Chicago/satellite/'
-  # output_dir = 'VIGOR/Chicago/polar/'
+  # input_dir = './placeholder_bingmap/'
+  # output_dir = './placeholder_polarmap/'
 
   if not os.path.exists(output_dir):
       os.makedirs(output_dir)
@@ -91,13 +85,6 @@ def polar_transform_VIGOR(input_dir, output_dir):
   
 
   for i, img in enumerate(images):
-    if i // 1000:
-        print('**********image=', i)
     signal = imageio.imread(input_dir + img)
     image = sample_bilinear(signal, x, y)
-    # img_uint = image.astype(np.uint8)
     imageio.imsave(output_dir + img,  image)
-
-
-if __name__ == '__main__':
-    polar_transform_VIGOR('VIGOR/Chicago/satellite/', 'VIGOR/Chicago/polar/')

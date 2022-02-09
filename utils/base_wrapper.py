@@ -1,9 +1,7 @@
-import os
 import torch
 import numpy as np
-from abc import ABC, abstractmethod
+from abc import ABC
 from os.path import dirname
-import scipy.io
 
 class BaseModel(ABC):
     """ Superclass model wrapper handling input feeding to model, loss calculation, validation metrics."""
@@ -21,13 +19,19 @@ class BaseModel(ABC):
     def set_input(self, batch):
         sate_ims = batch['satellite']
         pano_ims = batch['street']
-        polar_ims = batch['polar'] if (self.opt.polar is False) else None
+        
+        if 'polar' in batch:
+            polar_ims = batch['polar'] if (self.opt.polar is False) else None
+        else:
+            polar_ims = None
 
+        # this is necessary because of the different batch sizes of the two image sets in the VIGOR validation code
         if sate_ims is not None:
             self.satellite = sate_ims.to(self.device)
         else:
             self.satellite = None
 
+        # this is necessary because of the different batch sizes of the two image sets in the VIGOR validation code
         if pano_ims is not None:
             self.street = pano_ims.to(self.device)
         else:
@@ -97,8 +101,7 @@ class BaseModel(ABC):
                     param.requires_grad = requires_grad
 
     def validate_top_VIGOR(self, dist_array, dataloader):
-        # grd_descriptor = grd_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
-        # sat_descriptor = sat_descriptor.numpy() # torch tensors will not work with np.sum() on booleans, original code had tf tensors here
+        
         accuracy = 0.0
         accuracy_top1 = 0.0
         accuracy_top5 = 0.0
@@ -106,7 +109,6 @@ class BaseModel(ABC):
         accuracy_hit = 0.0
 
         data_amount = 0.0
-        # dist_array = 2 - 2 * np.matmul(grd_descriptor, np.transpose(sat_descriptor))
         top1_percent = int(dist_array.shape[1] * 0.01) + 1
         top1 = 1
         top5 = 5

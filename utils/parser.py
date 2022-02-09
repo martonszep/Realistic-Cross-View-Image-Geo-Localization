@@ -29,7 +29,7 @@ class Parser():
         parser.add_argument('--start_epoch', type=int, default=0)
 
         #data parameters
-        parser.add_argument('--data_root', type=str, default= './data/CVUSA')
+        parser.add_argument('--data_root', type=str, default= './data/CVUSA') # './data/VIGOR'
         parser.add_argument('--train_csv', type=str, default='train-19zl.csv')
         parser.add_argument('--val_csv', type=str, default='val-19zl.csv')
         parser.add_argument('--sate_size', help="Size of the satellite images (HxW) to be fed \
@@ -39,7 +39,6 @@ class Parser():
 
         #vigor parameters 
         parser.add_argument('--vigor_mode', type=str, default= 'train_SAFA_CVM-loss-same') # dataloader will use substrings of it
-        parser.add_argument('--vigor_root', type=str, default= './data/VIGOR')
         parser.add_argument('--vigor_dim', type=str, default=4096)
 
         #model parameters

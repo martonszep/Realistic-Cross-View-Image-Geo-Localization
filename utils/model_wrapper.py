@@ -1,6 +1,5 @@
 import os
 from utils.base_wrapper import BaseModel
-import numpy as np
 import torch
 from torch.nn import init
 from networks import safa
