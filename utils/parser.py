@@ -12,6 +12,7 @@ def image_size(s):
 
 
 class Parser():
+    """ Helper class for parsing arguments and logging."""
     def __init__(self):
         self.initialized = False
 

@@ -21,6 +21,7 @@ def compute_partial_repr(input_points, control_points):
     return repr_matrix
 
 class TPSGridGen(nn.Module):
+    """ Thin plate spline grid generator for the spatial transformer module."""
     def __init__(self, target_height, target_width, target_control_points):
         super(TPSGridGen, self).__init__()
         assert target_control_points.ndimension() == 2

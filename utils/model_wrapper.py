@@ -37,6 +37,7 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
 
 
 def define_R(ret_method, polar, gpu_ids=[], sate_size=(256, 256), pano_size=(112, 616), use_tps=True):
+    """ Function to create model with distributed learning possibility."""
     net = None
     if 'SAFA' == ret_method:
         sa_num = 8
@@ -50,7 +51,7 @@ def define_R(ret_method, polar, gpu_ids=[], sate_size=(256, 256), pano_size=(112
     return net
 
 class ModelWrapper(BaseModel):
-
+    """ Subclass model wrapper handling model saving, loading and training."""
     def __init__(self, opt, log_file, net_R):
         BaseModel.__init__(self, opt, log_file)
         self.optimizers = []

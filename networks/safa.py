@@ -29,7 +29,17 @@ class SA(nn.Module):
 
 # Siamese network w/o shared weights
 class SAFA(nn.Module):
-    #Modified version of "Spatial-Aware Feature Aggregation for Cross-View Image Based Geo-Localization" paper
+    """ 
+    Modified version of "Spatial-Aware Feature Aggregation for Cross-View Image Based Geo-Localization" paper
+
+    Args:
+        sa_num: Number of attention masks
+        transf_input: Size of the satellite images to be fed into the model (before transformation)
+        transf_output: Size of the satellite images after transformation
+        pano_size: Size of the panorama (street-view) images to be fed into the model
+        use_spatialtr: Whether to use the spatial transformer module
+        use_tps: Whether to use thin plate spline or affine transformation in the spatial transformer. Ineffective if use_spatialtr is False
+    """
     def __init__(self, sa_num=8, pano_size=(112, 616), transf_input=(256, 256), transf_output=(112, 616), use_spatialtr=False, use_tps=True):
         super().__init__()
 

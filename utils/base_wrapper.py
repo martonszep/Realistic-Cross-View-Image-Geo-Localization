@@ -6,6 +6,7 @@ from os.path import dirname
 import scipy.io
 
 class BaseModel(ABC):
+    """ Superclass model wrapper handling input feeding to model, loss calculation, validation metrics."""
     def __init__(self, opt, log_file):
         self.opt = opt
         self.gpu_ids = opt.gpu_ids

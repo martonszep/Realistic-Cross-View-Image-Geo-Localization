@@ -6,6 +6,17 @@ import _pickle as cPickle
 
 
 class CVUSA(torch.utils.data.Dataset):
+    """
+    Creates CVUSA dataset class for PyTorch dataloader.
+    
+    Args:
+        root: Root folder of CVUSA dataset
+        sate_size: Size of the satellite images to be fed into the model
+        pano_size: Size of the panorama (street-view) images to be fed into the model
+        use_polar: If True, satellite images will become the polar transformed ones, otherwise the output is the street, satellite and polar images
+        transform_op: Data augmentation
+    """
+
     def __init__(self, root, csv_file, sate_size=(256, 256), pano_size=(616, 112), use_polar=False, name=None, transform_op=None):
         self.root = root
         self.name = name

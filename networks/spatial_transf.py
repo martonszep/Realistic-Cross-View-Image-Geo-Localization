@@ -6,6 +6,7 @@ import torch
 from networks.tps import TPSGridGen
 
 class AffineLocalization(nn.Module):
+    """ Network estimating the parameters of the affine transformation in the spatial transformer module."""
     def __init__(self, in_channels, input_size) -> None:
         super(AffineLocalization, self).__init__()
 
@@ -47,6 +48,7 @@ class AffineLocalization(nn.Module):
         return self.localization(x)
 
 class TPSLocalization(nn.Module):
+    """ Network estimating the parameters of the thin plate spline transformation in the spatial transformer module."""
     def __init__(self, in_channels, input_size, grid_height, grid_width, target_control_points, bounded = False) -> None:
         super(TPSLocalization, self).__init__()
 
@@ -93,6 +95,7 @@ class TPSLocalization(nn.Module):
 
 # Extension of https://pytorch.org/tutorials/intermediate/spatial_transformer_tutorial.html
 class SpatialTransf (nn.Module):
+    """Spatial transformer module implementing affine and thin plate spline transformation."""
     def __init__(self, in_channels, output_size, input_size, use_tps=True, span_range=0.9, grid_height=6, grid_width=10):
         super(SpatialTransf, self).__init__()
 
@@ -175,6 +178,7 @@ class ResidualBlock(nn.Module):
 
 
 class ComposedSpatialTransf (nn.Module):
+    """ Wrapper for the spatial transformer to be able to stack more of them with residual blocks."""
     def __init__(self, in_channels, output_size, input_size, latent_channels=8, use_tps=True):
         super(ComposedSpatialTransf, self).__init__()
 
