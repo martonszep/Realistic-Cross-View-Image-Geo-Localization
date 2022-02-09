@@ -3,7 +3,7 @@ from utils.base_wrapper import BaseModel
 from networks.c_gan import *
 import numpy as np
 
-class RGANWrapper(BaseModel):
+class ModelWrapper(BaseModel):
 
     def __init__(self, opt, log_file, net_R):
         BaseModel.__init__(self, opt, log_file)

@@ -2,7 +2,7 @@ from data.custom_transforms import *
 from data.cvusa_utils import CVUSA, convert_image_np
 from networks.c_gan import *
 from torch.utils.tensorboard import SummaryWriter
-from utils import rgan_wrapper, base_wrapper, parser
+from utils import model_wrapper, base_wrapper, parser
 from utils.setup_helper import *
 import time
 from argparse import Namespace
@@ -22,8 +22,8 @@ if __name__ == '__main__':
     retrieval = define_R(ret_method=opt.r_model, polar=opt.polar, gpu_ids=opt.gpu_ids)
     log_print('Init {} as retrieval model'.format(opt.r_model))
 
-    rgan_wrapper = rgan_wrapper.RGANWrapper(opt, log_file, retrieval)
-    total_params = sum(p.numel() for p in rgan_wrapper.retrieval.parameters() if p.requires_grad)
+    model_wrapper = model_wrapper.ModelWrapper(opt, log_file, retrieval)
+    total_params = sum(p.numel() for p in model_wrapper.retrieval.parameters() if p.requires_grad)
     log_print('No. of trainable parameters: {}'.format(total_params))
 
     # Configure data loader
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False, num_workers=0)
     log_print('Load datasets from {}: train_set={} val_set={}'.format(opt.data_root, len(train_dataset), len(val_dataset)))
 
-    ret_best_acc = rgan_wrapper.ret_best_acc
+    ret_best_acc = model_wrapper.ret_best_acc
     log_print('Start training from epoch {} to {}, best acc: {}'.format(opt.start_epoch, opt.n_epochs, ret_best_acc))
     for epoch in range(opt.start_epoch, opt.n_epochs):
         start_time = time.time()
@@ -54,26 +54,26 @@ if __name__ == '__main__':
         epoch_l1_loss_v = []
 
         log_print('>>> RGAN Epoch {}'.format(epoch))
-        rgan_wrapper.retrieval.train()
+        model_wrapper.retrieval.train()
         for i, data in enumerate(train_loader):  # inner loop within one epoch
             if i == 0:
                 start_time_batches = time.time()
 
-            rgan_wrapper.set_input(data)
-            rgan_wrapper.optimize_parameters(epoch)
+            model_wrapper.set_input(data)
+            model_wrapper.optimize_parameters(epoch)
 
-            fake_street_batches_t.append(rgan_wrapper.fake_street_out.cpu().data)
-            street_batches_t.append(rgan_wrapper.street_out.cpu().data)
-            epoch_retrieval_loss_t.append(rgan_wrapper.r_loss.item())
-            epoch_l1_loss_t.append(rgan_wrapper.l1_loss.item()) if opt.polar is False else None
+            fake_street_batches_t.append(model_wrapper.fake_street_out.cpu().data)
+            street_batches_t.append(model_wrapper.street_out.cpu().data)
+            epoch_retrieval_loss_t.append(model_wrapper.r_loss.item())
+            epoch_l1_loss_t.append(model_wrapper.l1_loss.item()) if opt.polar is False else None
 
             if (i + 1) % 40 == 0 or (i + 1) == len(train_loader):
                 fake_street_vec = torch.cat(fake_street_batches_t, dim=0)
                 street_vec = torch.cat(street_batches_t, dim=0)
                 dists = 2 - 2 * torch.matmul(fake_street_vec, street_vec.permute(1, 0))
-                tp1 = rgan_wrapper.mutual_topk_acc(dists, topk=1)
-                tp5 = rgan_wrapper.mutual_topk_acc(dists, topk=5)
-                tp10 = rgan_wrapper.mutual_topk_acc(dists, topk=10)
+                tp1 = model_wrapper.mutual_topk_acc(dists, topk=1)
+                tp5 = model_wrapper.mutual_topk_acc(dists, topk=5)
+                tp10 = model_wrapper.mutual_topk_acc(dists, topk=10)
                 log_print('Batch:{} loss={:.3f} samples:{} tp1={tp1[0]:.2f}/{tp1[1]:.2f} ' \
                         'tp5={tp5[0]:.2f}/{tp5[1]:.2f} Time:{time:.2f}s'.format(i + 1, np.mean(epoch_retrieval_loss_t),
                                                 len(dists), tp1=tp1, tp5=tp5, time=time.time() - start_time_batches))
@@ -84,32 +84,32 @@ if __name__ == '__main__':
         writer.add_scalar('Loss/Train', np.mean(epoch_retrieval_loss_t), epoch) # tensorboard logging
         writer.add_scalar('Loss/L1_train', np.mean(epoch_l1_loss_t), epoch) if opt.polar is False else None
 
-        rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc,
+        model_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc,
                                         last_ckpt=True)  # Always save last ckpt
 
         # validation loop
-        rgan_wrapper.retrieval.eval()
+        model_wrapper.retrieval.eval()
         with torch.no_grad():
             for i, data in enumerate(val_loader):
-                rgan_wrapper.set_input(data)
-                rgan_wrapper.eval_model()
-                fake_street_batches_v.append(rgan_wrapper.fake_street_out_val.cpu().data)
-                street_batches_v.append(rgan_wrapper.street_out_val.cpu().data)
-                epoch_retrieval_loss_v.append(rgan_wrapper.r_loss.item())
-                epoch_l1_loss_v.append(rgan_wrapper.l1_loss.item()) if opt.polar is False else None
+                model_wrapper.set_input(data)
+                model_wrapper.eval_model()
+                fake_street_batches_v.append(model_wrapper.fake_street_out_val.cpu().data)
+                street_batches_v.append(model_wrapper.street_out_val.cpu().data)
+                epoch_retrieval_loss_v.append(model_wrapper.r_loss.item())
+                epoch_l1_loss_v.append(model_wrapper.l1_loss.item()) if opt.polar is False else None
         
         # validation metric calculation
         fake_street_vec = torch.cat(fake_street_batches_v, dim=0)
         street_vec = torch.cat(street_batches_v, dim=0)
         dists = 2 - 2 * torch.matmul(fake_street_vec, street_vec.permute(1, 0))
-        tp1 = rgan_wrapper.mutual_topk_acc(dists, topk=1)
-        tp5 = rgan_wrapper.mutual_topk_acc(dists, topk=5)
-        tp10 = rgan_wrapper.mutual_topk_acc(dists, topk=10)
+        tp1 = model_wrapper.mutual_topk_acc(dists, topk=1)
+        tp5 = model_wrapper.mutual_topk_acc(dists, topk=5)
+        tp10 = model_wrapper.mutual_topk_acc(dists, topk=10)
         street_batches_v.clear()
         fake_street_batches_v.clear()
 
         num = len(dists)
-        tp1p = rgan_wrapper.mutual_topk_acc(dists, topk=0.01 * num)
+        tp1p = model_wrapper.mutual_topk_acc(dists, topk=0.01 * num)
         acc = Namespace(num=len(dists), tp1=tp1, tp5=tp5, tp10=tp10, tp1p=tp1p)
 
         log_print('\nEvaluate Samples:{num:d}\nRecall(p2s/s2p) tp1:{tp1[0]:.2f}/{tp1[1]:.2f} ' \
@@ -129,7 +129,7 @@ if __name__ == '__main__':
         tp1_p2s_acc = acc.tp1[0]
         if tp1_p2s_acc > ret_best_acc:
             ret_best_acc = tp1_p2s_acc
-            rgan_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc, is_best=True)
+            model_wrapper.save_networks(epoch, os.path.dirname(log_file), best_acc=ret_best_acc, is_best=True)
             log_print('>>Save best model: epoch={} best_acc(tp1_p2s):{:.2f}'.format(epoch + 1, tp1_p2s_acc))
 
         # Program statistics
@@ -139,8 +139,8 @@ if __name__ == '__main__':
         # Visualize the STN transformation on some input batch
         if opt.polar is False and (epoch+1) % 5 == 0:
             with torch.no_grad():
-                images = next(iter(val_loader))['satellite'][:8].to(rgan_wrapper.device)
-                transformed_images = rgan_wrapper.retrieval.module.spatial_tr(images)
+                images = next(iter(val_loader))['satellite'][:8].to(model_wrapper.device)
+                transformed_images = model_wrapper.retrieval.module.spatial_tr(images)
                 writer.add_images(f"Spatial Transformer/Inputs", convert_image_np(images.cpu()), dataformats='NHWC')
                 writer.add_images(f"Spatial Transformer/Outputs", convert_image_np(transformed_images.cpu()), global_step=epoch,  dataformats='NHWC')
     writer.close()
